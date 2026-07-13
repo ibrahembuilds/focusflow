@@ -1,0 +1,11 @@
+# Fix GitHub language detection for FocusFlow
+# Mark generated/vendored files
+package-lock.json linguist-generated=true
+
+# Ensure TypeScript/TSX are properly detected
+*.ts linguist-language=TypeScript
+*.tsx linguist-language=TypeScript
+
+# Docs
+*.md linguist-documentation=true
+CHANGELOG.md linguist-documentation=true
