@@ -1,5 +1,6 @@
 import { lazy, Suspense, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
+import { Analytics as VercelAnalytics } from '@vercel/analytics/react';
 import Onboarding from './components/Onboarding';
 import Sidebar from './components/Sidebar';
 import Landing from './components/Landing';
@@ -101,6 +102,7 @@ export default function App() {
             <Route path="/app/*" element={<AppShell />} />
           </Route>
         </Routes>
+        <VercelAnalytics />
       </AuthProvider>
     </BrowserRouter>
   );
