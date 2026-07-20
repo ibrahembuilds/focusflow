@@ -5,6 +5,8 @@ import Sidebar from './components/Sidebar';
 import Landing from './components/Landing';
 import Login from './components/auth/Login';
 import Signup from './components/auth/Signup';
+import ForgotPassword from './components/auth/ForgotPassword';
+import ResetPassword from './components/auth/ResetPassword';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import Seo from './components/Seo';
 import { AuthProvider, useAuth } from './lib/auth';
@@ -93,6 +95,8 @@ export default function App() {
           <Route path="/" element={<Landing />} />
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
           <Route element={<ProtectedRoute />}>
             <Route path="/app/*" element={<AppShell />} />
           </Route>
