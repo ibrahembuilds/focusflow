@@ -62,7 +62,7 @@ export default function Dashboard() {
     if (activeTasks.length > 0) {
       useStore.getState().setActiveTaskId(activeTasks[0].id);
     }
-    navigate('/timer');
+    navigate('/app/timer');
   }
 
   return (
@@ -79,7 +79,7 @@ export default function Dashboard() {
             })}
           </p>
         </div>
-        <button className="btn btn-primary" onClick={() => navigate('/timer')}>
+        <button className="btn btn-primary" onClick={() => navigate('/app/timer')}>
           <Zap size={16} />
           Start focus
         </button>
@@ -181,7 +181,7 @@ export default function Dashboard() {
               <p className="section-label">Next up</p>
               <h2 id="priority-heading">Today's priorities</h2>
             </div>
-            <button className="btn btn-ghost btn-sm" onClick={() => navigate('/tasks')}>
+            <button className="btn btn-ghost btn-sm" onClick={() => navigate('/app/tasks')}>
               <ListPlus size={15} />
               Add task
             </button>
@@ -192,7 +192,7 @@ export default function Dashboard() {
               <Target className="empty-state-icon" size={34} aria-hidden="true" />
               <div className="empty-state-title">Choose your first priority</div>
               <div className="empty-state-desc">Add a task, then give it one focused session.</div>
-              <button className="btn btn-primary" onClick={() => navigate('/tasks')}>
+              <button className="btn btn-primary" onClick={() => navigate('/app/tasks')}>
                 Add a task
                 <ArrowRight size={14} />
               </button>
@@ -218,7 +218,7 @@ export default function Dashboard() {
                   </div>
                 ))}
                 {activeTasks.length > 5 && (
-                  <button className="more-tasks" onClick={() => navigate('/tasks')}>
+                  <button className="more-tasks" onClick={() => navigate('/app/tasks')}>
                     View {activeTasks.length - 5} more
                   </button>
                 )}

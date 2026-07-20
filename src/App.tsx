@@ -1,7 +1,13 @@
 import { lazy, Suspense, useEffect } from 'react';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
 import Onboarding from './components/Onboarding';
 import Sidebar from './components/Sidebar';
+import Landing from './components/Landing';
+import Login from './components/auth/Login';
+import Signup from './components/auth/Signup';
+import ProtectedRoute from './components/auth/ProtectedRoute';
+import Seo from './components/Seo';
+import { AuthProvider, useAuth } from './lib/auth';
 import { useStore } from './store';
 
 const Dashboard = lazy(() => import('./components/Dashboard'));
@@ -22,25 +28,46 @@ function RouteFallback() {
   );
 }
 
+function AppShell() {
+  const sidebarCollapsed = useStore((state) => state.sidebarCollapsed);
+  const location = useLocation();
+
+  return (
+    <div className={`app-shell${sidebarCollapsed ? ' sidebar-collapsed' : ''}`}>
+      <Seo title="Dashboard" description="Your FocusFlow workspace." path={location.pathname} noindex />
+      <Onboarding />
+      <Sidebar />
+      <main className="main-content">
+        <Suspense fallback={<RouteFallback />}>
+          <Routes>
+            <Route index element={<Dashboard />} />
+            <Route path="timer" element={<Timer />} />
+            <Route path="tasks" element={<TaskList />} />
+            <Route path="calendar" element={<CalendarView />} />
+            <Route path="analytics" element={<Analytics />} />
+            <Route path="ai-decompose" element={<AIDecompose />} />
+            <Route path="settings" element={<Settings />} />
+          </Routes>
+        </Suspense>
+      </main>
+    </div>
+  );
+}
+
+function StoreAuthBridge() {
+  const { user } = useAuth();
+  const hydrateForUser = useStore((state) => state.hydrateForUser);
+
+  useEffect(() => {
+    void hydrateForUser(user?.id ?? null);
+  }, [user?.id, hydrateForUser]);
+
+  return null;
+}
+
 export default function App() {
   const theme = useStore((state) => state.theme);
   const accentColor = useStore((state) => state.accentColor);
-  const sidebarCollapsed = useStore((state) => state.sidebarCollapsed);
-
-  useEffect(() => {
-    try {
-      const rawState = localStorage.getItem('focusflow-storage');
-      if (!rawState) return;
-
-      const savedState = JSON.parse(rawState);
-      if (savedState?.state && 'openRouterKey' in savedState.state) {
-        delete savedState.state.openRouterKey;
-        localStorage.setItem('focusflow-storage', JSON.stringify(savedState));
-      }
-    } catch {
-      // Ignore malformed legacy storage and let Zustand replace it on the next update.
-    }
-  }, []);
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
@@ -57,23 +84,17 @@ export default function App() {
 
   return (
     <BrowserRouter>
-      <div className={`app-shell${sidebarCollapsed ? ' sidebar-collapsed' : ''}`}>
-        <Onboarding />
-        <Sidebar />
-        <main className="main-content">
-          <Suspense fallback={<RouteFallback />}>
-            <Routes>
-              <Route path="/" element={<Dashboard />} />
-              <Route path="/timer" element={<Timer />} />
-              <Route path="/tasks" element={<TaskList />} />
-              <Route path="/calendar" element={<CalendarView />} />
-              <Route path="/analytics" element={<Analytics />} />
-              <Route path="/ai-decompose" element={<AIDecompose />} />
-              <Route path="/settings" element={<Settings />} />
-            </Routes>
-          </Suspense>
-        </main>
-      </div>
+      <AuthProvider>
+        <StoreAuthBridge />
+        <Routes>
+          <Route path="/" element={<Landing />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/signup" element={<Signup />} />
+          <Route element={<ProtectedRoute />}>
+            <Route path="/app/*" element={<AppShell />} />
+          </Route>
+        </Routes>
+      </AuthProvider>
     </BrowserRouter>
   );
 }

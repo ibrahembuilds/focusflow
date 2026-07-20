@@ -1,0 +1,37 @@
+# FocusFlow — https://prmoda.netlify.app
+User-agent: *
+Allow: /
+
+# AI / LLM crawlers — explicitly welcomed so FocusFlow can be cited by
+# AI answer engines (ChatGPT, Claude, Perplexity, Google AI Overviews, etc.)
+User-agent: GPTBot
+Allow: /
+
+User-agent: ChatGPT-User
+Allow: /
+
+User-agent: OAI-SearchBot
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: Claude-Web
+Allow: /
+
+User-agent: anthropic-ai
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: Perplexity-User
+Allow: /
+
+User-agent: Google-Extended
+Allow: /
+
+User-agent: CCBot
+Allow: /
+
+Sitemap: https://prmoda.netlify.app/sitemap.xml

@@ -3,9 +3,70 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <meta name="description" content="FocusFlow brings tasks, focus sessions, planning, analytics, and AI-assisted breakdowns into one calm workspace." />
+
+    <title>FocusFlow | Tasks, Focus Timer & AI Planning in One Calm Workspace</title>
+    <meta name="description" content="FocusFlow is a free productivity workspace: plan your day, run Pomodoro-style focus sessions, and let AI break big goals into clear tasks. No clutter, just finished work." />
+    <meta name="keywords" content="focus timer, pomodoro app, task manager, AI task breakdown, productivity app, daily planner, focus app, to-do list" />
+    <meta name="author" content="FocusFlow" />
+    <meta name="robots" content="index, follow" />
+    <link rel="canonical" href="https://prmoda.netlify.app/" />
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="FocusFlow" />
+    <meta property="og:title" content="FocusFlow | Tasks, Focus Timer & AI Planning in One Calm Workspace" />
+    <meta property="og:description" content="Plan your day, protect deep work with a focus timer, and let AI break big goals into clear tasks. Free to start." />
+    <meta property="og:url" content="https://prmoda.netlify.app/" />
+    <meta property="og:image" content="https://prmoda.netlify.app/brand/focusflow-logo.png" />
+    <meta property="og:locale" content="en_US" />
+
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="FocusFlow | Tasks, Focus Timer & AI Planning" />
+    <meta name="twitter:description" content="Plan your day, protect deep work with a focus timer, and let AI break big goals into clear tasks. Free to start." />
+    <meta name="twitter:image" content="https://prmoda.netlify.app/brand/focusflow-logo.png" />
+
     <meta name="theme-color" content="#f4f7f5" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="icon" type="image/png" href="/brand/focusflow-logo.png" />
+    <link rel="apple-touch-icon" href="/brand/focusflow-logo.png" />
+    <link rel="manifest" href="/site.webmanifest" />
+
+    <!-- Structured data: what FocusFlow is, for search engines and AI answer engines (GEO/AIO) -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "SoftwareApplication",
+        "name": "FocusFlow",
+        "url": "https://prmoda.netlify.app/",
+        "applicationCategory": "ProductivityApplication",
+        "operatingSystem": "Web",
+        "description": "FocusFlow is a productivity workspace combining daily task planning, a Pomodoro-style focus timer, AI-powered goal decomposition, a calendar, and analytics.",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        },
+        "featureList": [
+          "Prioritized daily task list",
+          "Pomodoro-style focus timer with breaks",
+          "AI task decomposition for large goals",
+          "Weekly analytics and completion rates",
+          "Calendar view of tasks",
+          "Daily focus streaks"
+        ]
+      }
+    </script>
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "Organization",
+        "name": "FocusFlow",
+        "url": "https://prmoda.netlify.app/",
+        "logo": "https://prmoda.netlify.app/brand/focusflow-logo.png"
+      }
+    </script>
+
     <script>
       try {
         const saved = JSON.parse(localStorage.getItem('focusflow-storage') || '{}');
@@ -20,7 +81,6 @@
         document.documentElement.dataset.theme = 'light';
       }
     </script>
-    <title>FocusFlow | Focus and task planning</title>
   </head>
   <body>
     <div id="root"></div>

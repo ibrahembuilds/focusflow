@@ -1,5 +1,12 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import {
+  fetchUserTasks,
+  fetchUserSessions,
+  upsertTaskRemote,
+  deleteTaskRemote,
+  insertSessionRemote,
+} from './lib/sync';
 
 // ── Types ──
 export interface Task {
@@ -34,6 +41,11 @@ export interface FocusFlowState {
   setSidebarCollapsed: (collapsed: boolean) => void;
   hasCompletedOnboarding: boolean;
   setHasCompletedOnboarding: (completed: boolean) => void;
+
+  // Auth-scoped data sync
+  userId: string | null;
+  isSyncing: boolean;
+  hydrateForUser: (userId: string | null) => Promise<void>;
 
   // Tasks
   tasks: Task[];
@@ -75,7 +87,7 @@ const uid = () => crypto.randomUUID();
 
 export const useStore = create<FocusFlowState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       // Appearance
       theme: 'light',
       setTheme: (theme) => set({ theme }),
@@ -86,42 +98,65 @@ export const useStore = create<FocusFlowState>()(
       hasCompletedOnboarding: false,
       setHasCompletedOnboarding: (hasCompletedOnboarding) => set({ hasCompletedOnboarding }),
 
+      // ── Auth-scoped data sync ──
+      userId: null,
+      isSyncing: false,
+
+      hydrateForUser: async (userId) => {
+        if (!userId) {
+          set({ userId: null, tasks: [], sessions: [] });
+          return;
+        }
+        set({ userId, isSyncing: true });
+        const [tasks, sessions] = await Promise.all([
+          fetchUserTasks(userId),
+          fetchUserSessions(userId),
+        ]);
+        // Bail if the user switched again while this fetch was in flight.
+        if (get().userId !== userId) return;
+        set({ tasks, sessions, isSyncing: false });
+      },
+
       // ── Tasks ──
       tasks: [],
 
-      addTask: (text, priority = 'medium') =>
-        set((s) => ({
-          tasks: [
-            { id: uid(), text, completed: false, sessions: 0, createdAt: today(), priority },
-            ...s.tasks,
-          ],
-        })),
+      addTask: (text, priority = 'medium') => {
+        const newTask: Task = { id: uid(), text, completed: false, sessions: 0, createdAt: today(), priority };
+        set((s) => ({ tasks: [newTask, ...s.tasks] }));
+        const userId = get().userId;
+        if (userId) void upsertTaskRemote(userId, newTask);
+      },
 
-      addTasks: (texts) =>
-        set((s) => ({
-          tasks: [
-            ...texts.map((t) => ({
-              id: uid(),
-              text: t,
-              completed: false,
-              sessions: 0,
-              createdAt: today(),
-              priority: 'medium' as const,
-            })),
-            ...s.tasks,
-          ],
-        })),
+      addTasks: (texts) => {
+        const newTasks: Task[] = texts.map((t) => ({
+          id: uid(),
+          text: t,
+          completed: false,
+          sessions: 0,
+          createdAt: today(),
+          priority: 'medium' as const,
+        }));
+        set((s) => ({ tasks: [...newTasks, ...s.tasks] }));
+        const userId = get().userId;
+        if (userId) newTasks.forEach((t) => void upsertTaskRemote(userId, t));
+      },
 
-      toggleTask: (id) =>
+      toggleTask: (id) => {
         set((s) => ({
           tasks: s.tasks.map((t) => (t.id === id ? { ...t, completed: !t.completed } : t)),
-        })),
+        }));
+        const userId = get().userId;
+        const updated = get().tasks.find((t) => t.id === id);
+        if (userId && updated) void upsertTaskRemote(userId, updated);
+      },
 
-      deleteTask: (id) =>
+      deleteTask: (id) => {
         set((s) => ({
           tasks: s.tasks.filter((t) => t.id !== id),
           activeTaskId: s.activeTaskId === id ? null : s.activeTaskId,
-        })),
+        }));
+        if (get().userId) void deleteTaskRemote(id);
+      },
 
       reorderTasks: (fromIndex, toIndex) =>
         set((s) => {
@@ -132,12 +167,16 @@ export const useStore = create<FocusFlowState>()(
           return { tasks: [...todaysTasks, ...others] };
         }),
 
-      incrementTaskSession: (id) =>
+      incrementTaskSession: (id) => {
         set((s) => ({
           tasks: s.tasks.map((t) =>
             t.id === id ? { ...t, sessions: t.sessions + 1 } : t
           ),
-        })),
+        }));
+        const userId = get().userId;
+        const updated = get().tasks.find((t) => t.id === id);
+        if (userId && updated) void upsertTaskRemote(userId, updated);
+      },
 
       // ── Timer ──
       timerRunning: false,
@@ -154,8 +193,11 @@ export const useStore = create<FocusFlowState>()(
 
       // ── Sessions ──
       sessions: [],
-      addSession: (session) =>
-        set((s) => ({ sessions: [session, ...s.sessions] })),
+      addSession: (session) => {
+        set((s) => ({ sessions: [session, ...s.sessions] }));
+        const userId = get().userId;
+        if (userId) void insertSessionRemote(userId, session);
+      },
 
       // ── AI ──
       isDecomposing: false,

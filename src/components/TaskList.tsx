@@ -18,7 +18,7 @@ import { CSS } from '@dnd-kit/utilities';
 import { GripVertical, Trash2, Play, Plus, Sparkles, Check, Target } from 'lucide-react';
 import { useStore, getTodaysTasks } from '../store';
 import type { Task } from '../store';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 
 // ── Sortable Task Item ──
 function SortableTask({
@@ -119,6 +119,7 @@ export default function TaskList() {
     decomposeResult,
     clearDecompose,
   } = useStore();
+  const navigate = useNavigate();
 
   const [newTaskText, setNewTaskText] = useState('');
   const [priority, setPriority] = useState<Task['priority']>('medium');
@@ -160,8 +161,7 @@ export default function TaskList() {
   function handleStartFocus(task: Task) {
     setActiveTaskId(task.id);
     setTimerMinutes(25);
-    // Navigate handled by parent
-    window.location.href = '/timer';
+    navigate('/app/timer');
   }
 
   function handleAddDecomposed() {
@@ -180,7 +180,7 @@ export default function TaskList() {
             {active.length} active, {completed.length} completed today
           </p>
         </div>
-        <Link to="/ai-decompose" className="btn btn-primary">
+        <Link to="/app/ai-decompose" className="btn btn-primary">
           <Sparkles size={16} />
           AI Decompose
         </Link>

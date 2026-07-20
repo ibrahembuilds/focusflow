@@ -4,6 +4,33 @@ All notable changes to the FocusFlow productivity platform.
 
 ---
 
+## [1.1.0] — 2026-07-20 — Accounts, SEO & AI Provider Switch
+
+### 🔐 Authentication & Authorization
+- Email/password accounts via Supabase Auth (sign up, log in, log out)
+- Protected `/app/*` routes — logged-out visitors are redirected to `/login`
+- Per-user data isolation: `tasks` and `timer_sessions` scoped by `user_id` with row-level security
+- Tasks and focus sessions sync live to Supabase per account
+
+### 🏠 Landing Page
+- New public marketing page at `/` with hero, feature grid, "how it works" steps, and FAQ
+- Responsive nav with mobile menu
+
+### 🔍 SEO / AIO / GEO
+- Full meta tags: description, canonical URL, Open Graph, Twitter Cards
+- JSON-LD structured data: `SoftwareApplication`, `Organization`, `FAQPage`
+- `robots.txt` (with explicit AI-crawler allowances), `sitemap.xml`, `llms.txt`, and a web app manifest
+- Per-route `<title>`/meta via a lightweight `Seo` component; private `/app/*` pages marked `noindex`
+
+### 🧠 AI Task Decomposition
+- Switched provider from OpenRouter to the OpenAI API directly (`OPENAI_API_KEY`, `OPENAI_MODEL`)
+
+### 📱 Responsive fixes
+- iOS safe-area padding for the mobile bottom nav and toasts
+- Overflow fixes on narrow phones across Analytics, Timer, Settings, and Calendar
+
+---
+
 ## [1.0.0] — 2026-07-13 — Initial Release 🚀
 
 ### Complete Rewrite from Promda

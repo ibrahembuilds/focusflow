@@ -1,9 +1,11 @@
 -- FocusFlow schema for Supabase
 -- Run this in the Supabase dashboard: SQL Editor > New query > paste > Run.
 -- Tables mirror the Task and TimerSession types in src/store.ts.
+-- Data is scoped per authenticated user via Supabase Auth (auth.uid()).
 
 create table if not exists tasks (
   id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users (id) on delete cascade,
   text text not null,
   completed boolean not null default false,
   sessions integer not null default 0,
@@ -16,6 +18,7 @@ create table if not exists tasks (
 
 create table if not exists timer_sessions (
   id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users (id) on delete cascade,
   task_id uuid references tasks (id) on delete set null,
   task_text text,
   duration integer not null, -- seconds
@@ -23,15 +26,43 @@ create table if not exists timer_sessions (
   timestamp timestamptz not null default now()
 );
 
--- Row Level Security: enabled with a permissive policy for anonymous access.
--- NOTE: this lets anyone with your anon key read/write all rows. Fine for a
--- personal single-user app; when you add Supabase Auth, replace these
--- policies with user-scoped ones (add a user_id column and check auth.uid()).
+create index if not exists tasks_user_id_idx on tasks (user_id);
+create index if not exists timer_sessions_user_id_idx on timer_sessions (user_id);
+
+-- Row Level Security: each user can only see and modify their own rows.
 alter table tasks enable row level security;
 alter table timer_sessions enable row level security;
 
-create policy "public access to tasks" on tasks
-  for all using (true) with check (true);
+drop policy if exists "public access to tasks" on tasks;
+drop policy if exists "public access to timer_sessions" on timer_sessions;
 
-create policy "public access to timer_sessions" on timer_sessions
-  for all using (true) with check (true);
+create policy "select own tasks" on tasks
+  for select using (auth.uid() = user_id);
+
+create policy "insert own tasks" on tasks
+  for insert with check (auth.uid() = user_id);
+
+create policy "update own tasks" on tasks
+  for update using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+create policy "delete own tasks" on tasks
+  for delete using (auth.uid() = user_id);
+
+create policy "select own timer_sessions" on timer_sessions
+  for select using (auth.uid() = user_id);
+
+create policy "insert own timer_sessions" on timer_sessions
+  for insert with check (auth.uid() = user_id);
+
+create policy "update own timer_sessions" on timer_sessions
+  for update using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+create policy "delete own timer_sessions" on timer_sessions
+  for delete using (auth.uid() = user_id);
+
+-- If you previously ran the old permissive-access version of this schema,
+-- run this migration to bring existing tables up to date:
+--
+-- alter table tasks add column if not exists user_id uuid references auth.users (id) on delete cascade;
+-- alter table timer_sessions add column if not exists user_id uuid references auth.users (id) on delete cascade;
+-- -- then backfill user_id for existing rows before adding: alter table tasks alter column user_id set not null;

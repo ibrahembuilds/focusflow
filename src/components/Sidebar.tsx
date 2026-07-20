@@ -1,4 +1,4 @@
-import { NavLink } from 'react-router-dom';
+import { NavLink, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard,
   Timer,
@@ -11,19 +11,28 @@ import {
   Moon,
   PanelLeftClose,
   PanelLeftOpen,
+  LogOut,
 } from 'lucide-react';
 import { useStore } from '../store';
+import { useAuth } from '../lib/auth';
 
 const navItems = [
-  { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
-  { to: '/timer', icon: Timer, label: 'Focus timer' },
-  { to: '/tasks', icon: ListTodo, label: 'Tasks' },
-  { to: '/calendar', icon: CalendarDays, label: 'Calendar' },
-  { to: '/analytics', icon: BarChart3, label: 'Analytics' },
+  { to: '/app', icon: LayoutDashboard, label: 'Dashboard' },
+  { to: '/app/timer', icon: Timer, label: 'Focus timer' },
+  { to: '/app/tasks', icon: ListTodo, label: 'Tasks' },
+  { to: '/app/calendar', icon: CalendarDays, label: 'Calendar' },
+  { to: '/app/analytics', icon: BarChart3, label: 'Analytics' },
 ];
 
 export default function Sidebar() {
   const { theme, setTheme, sidebarCollapsed, setSidebarCollapsed } = useStore();
+  const { user, signOut } = useAuth();
+  const navigate = useNavigate();
+
+  async function handleSignOut() {
+    await signOut();
+    navigate('/', { replace: true });
+  }
 
   return (
     <aside className="sidebar">
@@ -44,7 +53,7 @@ export default function Sidebar() {
             key={item.to}
             to={item.to}
             className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
-            end={item.to === '/'}
+            end={item.to === '/app'}
             aria-label={item.label}
             title={item.label}
           >
@@ -55,7 +64,7 @@ export default function Sidebar() {
 
         <div className="nav-section">Plan</div>
         <NavLink
-          to="/ai-decompose"
+          to="/app/ai-decompose"
           className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
           aria-label="AI breakdown"
           title="AI breakdown"
@@ -80,7 +89,7 @@ export default function Sidebar() {
         </button>
 
         <NavLink
-          to="/settings"
+          to="/app/settings"
           className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
           aria-label="Settings"
           title="Settings"
@@ -102,6 +111,27 @@ export default function Sidebar() {
             {theme === 'light' ? 'Dark' : 'Light'}
           </span>
         </button>
+
+        {user && (
+          <div className="sidebar-account">
+            <div className="sidebar-account-info" title={user.email}>
+              <span className="sidebar-account-avatar" aria-hidden="true">
+                {(user.email ?? '?').charAt(0).toUpperCase()}
+              </span>
+              <span className="sidebar-account-email">{user.email}</span>
+            </div>
+            <button
+              type="button"
+              className="nav-item sidebar-signout"
+              onClick={handleSignOut}
+              aria-label="Log out"
+              title="Log out"
+            >
+              <LogOut size={18} />
+              <span>Log out</span>
+            </button>
+          </div>
+        )}
       </nav>
     </aside>
   );

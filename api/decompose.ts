@@ -1,4 +1,4 @@
-const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
+const OPENAI_URL = 'https://api.openai.com/v1/chat/completions';
 const MAX_GOAL_LENGTH = 2_000;
 
 const DECOMPOSE_PROMPT = `You are FocusFlow AI, a productivity assistant. Break the user's goal into practical subtasks.
@@ -10,7 +10,7 @@ Rules:
 - Keep each subtask small enough for one focus session.
 - Use simple, direct language.`;
 
-type OpenRouterResponse = {
+type OpenAIResponse = {
   choices?: Array<{ message?: { content?: string } }>;
 };
 
@@ -42,9 +42,9 @@ export default {
       return json({ error: 'Method not allowed.' }, 405);
     }
 
-    const apiKey = process.env.OPENROUTER_API_KEY;
+    const apiKey = process.env.OPENAI_API_KEY;
     if (!apiKey) {
-      return json({ error: 'AI is not configured. Add OPENROUTER_API_KEY in Vercel.' }, 503);
+      return json({ error: 'AI is not configured. Add OPENAI_API_KEY in Vercel.' }, 503);
     }
 
     let body: unknown;
@@ -65,16 +65,14 @@ export default {
     }
 
     try {
-      const response = await fetch(OPENROUTER_URL, {
+      const response = await fetch(OPENAI_URL, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${apiKey}`,
-          'HTTP-Referer': new URL(request.url).origin,
-          'X-Title': 'FocusFlow',
         },
         body: JSON.stringify({
-          model: process.env.OPENROUTER_MODEL || 'openai/gpt-4o-mini',
+          model: process.env.OPENAI_MODEL || 'gpt-4o-mini',
           messages: [
             { role: 'system', content: DECOMPOSE_PROMPT },
             { role: 'user', content: goal },
@@ -85,11 +83,11 @@ export default {
       });
 
       if (!response.ok) {
-        console.error('OpenRouter request failed:', response.status);
+        console.error('OpenAI request failed:', response.status);
         return json({ error: 'AI could not process this goal. Try again shortly.' }, 502);
       }
 
-      const result = (await response.json()) as OpenRouterResponse;
+      const result = (await response.json()) as OpenAIResponse;
       const content = result.choices?.[0]?.message?.content?.trim() ?? '';
       const tasks = parseTasks(content);
 

@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="public/vite.svg" alt="FocusFlow" width="64" height="64" />
+  <img src="public/brand/focusflow-logo.png" alt="FocusFlow" width="64" height="64" />
 </p>
 
 <h1 align="center">FocusFlow</h1>
@@ -15,35 +15,42 @@
   <img src="https://img.shields.io/badge/license-MIT-green" alt="License" />
 </p>
 
+<p align="center">
+  <a href="https://prmoda.netlify.app">Live demo</a>
+</p>
+
 ---
 
 ## ✨ What is FocusFlow?
 
 FocusFlow bridges the gap between simple to-do lists and complex project management. The core innovation is **AI Task Decomposition** — paste a vague goal like "Launch a Shopify Store" and the AI breaks it into actionable, bite-sized subtasks.
 
-Combined with a built-in **Pomodoro focus timer** and **drag-and-drop task organization**, FocusFlow transforms chaotic mental load into structured, executable flow.
+Combined with a built-in **Pomodoro focus timer**, **drag-and-drop task organization**, and **Supabase-backed accounts**, FocusFlow transforms chaotic mental load into structured, executable flow.
 
 ## 🎯 Features
 
 | Feature | Description |
 |---------|-------------|
-| 🧠 **AI Task Breakdown** | LLM-powered decomposition of complex projects into manageable steps |
-| ⏱️ **Focus Timer** | Pomodoro timer with circular SVG progress ring, presets, and task linking |
+| 🔐 **Accounts** | Email/password auth via Supabase, with row-level security isolating each user's data |
+| 🧠 **AI Task Breakdown** | OpenAI-powered decomposition of complex projects into manageable steps |
+| ⏱️ **Focus Timer** | Pomodoro timer with presets, custom durations, and break tracking |
 | 📋 **Drag & Drop Tasks** | Reactive fluid UI with DND Kit for effortless prioritization |
 | 📊 **Analytics** | Recharts-powered dashboards — weekly sessions, priority breakdowns |
 | 📅 **Calendar** | Monthly calendar with task indicators and daily task view |
-| 💾 **Local Persistence** | Zustand + localStorage — your data stays on your device |
-| 🎨 **Premium UI** | Dark theme inspired by Linear, glass morphism, smooth animations |
+| 🎨 **Premium UI** | Calm, glass-morphism design system with light/dark themes and 5 accent colors |
 
 ## 🚀 Quick Start
 
 ```bash
 # Clone
-git clone https://github.com/hemoyt/promda.git
-cd promda
+git clone https://github.com/ibrahembuilds/focusflow.git
+cd focusflow
 
 # Install
 npm install
+
+# Configure environment (see .env.example)
+cp .env.example .env
 
 # Develop
 npm run dev
@@ -52,41 +59,48 @@ npm run dev
 npm run build
 ```
 
-## 🔑 AI Setup
+## 🔑 Environment setup
 
-FocusFlow uses [OpenRouter](https://openrouter.ai) for AI task decomposition:
+FocusFlow needs two services configured — see [`.env.example`](.env.example) for the full list:
 
-1. Get a free API key at [openrouter.ai/keys](https://openrouter.ai/keys)
-2. Go to **Settings** in the app
-3. Paste your key (starts with `sk-or-v1-`)
-4. Use **AI Decompose** to break down any goal
+1. **Supabase** — create a project, run [`supabase/schema.sql`](supabase/schema.sql) in the SQL editor, then set `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`.
+2. **OpenAI** — used by the AI task breakdown feature. Set `OPENAI_API_KEY` (server-side only, used by [`api/decompose.ts`](api/decompose.ts)).
 
 ## 🏗️ Architecture
 
 ```
 src/
 ├── components/
-│   ├── Timer.tsx          # Pomodoro with SVG ring
-│   ├── TaskList.tsx        # DND Kit drag-and-drop
-│   ├── AIDecompose.tsx     # OpenRouter API integration
-│   ├── Dashboard.tsx       # Stats + weekly charts
-│   ├── CalendarView.tsx    # Monthly calendar
-│   ├── Analytics.tsx       # Recharts charts
-│   ├── Sidebar.tsx         # Navigation
-│   └── Settings.tsx        # Config + data management
-├── store.ts                # Zustand state management
-├── lib/api.ts              # OpenRouter API client
-└── index.css               # Full design system
+│   ├── auth/                # Login, Signup, ProtectedRoute, AuthLayout
+│   ├── Landing.tsx           # Public marketing page
+│   ├── Timer.tsx              # Pomodoro with SVG ring
+│   ├── TaskList.tsx           # DND Kit drag-and-drop
+│   ├── AIDecompose.tsx        # OpenAI API integration
+│   ├── Dashboard.tsx          # Stats + weekly charts
+│   ├── CalendarView.tsx       # Monthly calendar
+│   ├── Analytics.tsx          # Recharts charts
+│   ├── Sidebar.tsx            # Navigation + account menu
+│   ├── Settings.tsx           # Config + data management
+│   └── Seo.tsx                # Per-route meta tags
+├── lib/
+│   ├── auth.tsx               # Supabase Auth context
+│   ├── supabase.ts            # Supabase client
+│   ├── sync.ts                # Task/session sync with Supabase
+│   └── api.ts                 # AI decompose API client
+├── store.ts                   # Zustand state management
+└── index.css                  # Full design system
 ```
 
 ## 📦 Tech Stack
 
 - **React 19** + **TypeScript** + **Vite 8**
+- **React Router 7** — routing and protected routes
+- **Supabase** — auth and Postgres-backed data storage
 - **Zustand** — state management
 - **DND Kit** — drag and drop
 - **Recharts** — data visualization
 - **Lucide React** — icons
-- **OpenRouter API** — AI decomposition
+- **OpenAI API** — AI task decomposition
 
 ## 📄 License
 
