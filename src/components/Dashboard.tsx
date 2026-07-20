@@ -33,10 +33,14 @@ import {
   getLongestStreak,
   getRecentActivity,
 } from '../store';
+import { useAuth } from '../lib/auth';
 
 export default function Dashboard() {
   const { tasks, sessions } = useStore();
+  const { user } = useAuth();
   const navigate = useNavigate();
+  const fullName = typeof user?.user_metadata?.fullName === 'string' ? user.user_metadata.fullName : '';
+  const firstName = fullName.trim().split(/\s+/)[0] || '';
 
   const todaysTasks = getTodaysTasks(tasks);
   const completedToday = getCompletedToday(tasks);
@@ -69,7 +73,7 @@ export default function Dashboard() {
     <div className="animate-in">
       <header className="page-header dashboard-header">
         <div>
-          <p className="page-kicker">{greeting}</p>
+          <p className="page-kicker">{firstName ? `${greeting}, ${firstName}` : greeting}</p>
           <h1 className="page-title">Ready for a focused day?</h1>
           <p className="page-subtitle">
             {new Date().toLocaleDateString('en-US', {

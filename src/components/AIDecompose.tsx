@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Sparkles, ArrowRight, Bot, Lightbulb } from 'lucide-react';
 import { useStore } from '../store';
 import { decomposeTask } from '../lib/api';
@@ -14,6 +15,7 @@ const EXAMPLE_GOALS = [
 
 export default function AIDecompose() {
   const { isDecomposing, setDecomposing, setDecomposeResult } = useStore();
+  const navigate = useNavigate();
 
   const [goal, setGoal] = useState('');
   const [error, setError] = useState('');
@@ -26,8 +28,12 @@ export default function AIDecompose() {
 
     try {
       const results = await decomposeTask(trimmed);
+      if (results.length === 0) {
+        throw new Error('AI returned an unexpected response. Try wording the goal differently.');
+      }
       setDecomposeResult(results);
       setGoal('');
+      navigate('/app/tasks');
     } catch (err: any) {
       setError(err.message || 'AI task breakdown is unavailable.');
     } finally {
@@ -187,7 +193,7 @@ export default function AIDecompose() {
               <div>
                 <h4 style={{ fontSize: '0.9rem', marginBottom: '0.25rem' }}>AI Breaks It Down</h4>
                 <p style={{ fontSize: '0.8rem', color: 'var(--text-tertiary)' }}>
-                  The AI analyzes your goal, draws from best practices, and generates 4-8 specific, actionable subtasks.
+                  The AI analyzes your goal and generates 4-8 specific subtasks, each with a suggested priority and a time estimate.
                 </p>
               </div>
             </div>

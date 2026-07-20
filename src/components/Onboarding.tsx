@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
-import { ArrowLeft, ArrowRight, Check, Clock3, ListTodo, X } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Check, Clock3, ListTodo, User, X } from 'lucide-react';
 import { useStore } from '../store';
+import { useAuth } from '../lib/auth';
 
 const SESSION_OPTIONS = [15, 25, 45] as const;
 
@@ -9,6 +10,11 @@ const steps = [
     eyebrow: 'Welcome to FocusFlow',
     title: 'A calmer way to finish what matters.',
     description: 'Plan one clear task, protect time for it, and build a steady rhythm without extra clutter.',
+  },
+  {
+    eyebrow: 'Get acquainted',
+    title: 'What should we call you?',
+    description: 'This is just for your dashboard greeting. You can change it later in Settings.',
   },
   {
     eyebrow: 'Start small',
@@ -31,7 +37,9 @@ export default function Onboarding() {
     timerMinutes,
     setTimerMinutes,
   } = useStore();
+  const { updateProfile } = useAuth();
   const [step, setStep] = useState(0);
+  const [name, setName] = useState('');
   const [firstTask, setFirstTask] = useState('');
   const [duration, setDuration] = useState(timerMinutes);
 
@@ -56,6 +64,9 @@ export default function Onboarding() {
   const currentStep = steps[step];
 
   function finishOnboarding() {
+    const trimmedName = name.trim();
+    if (trimmedName) void updateProfile({ fullName: trimmedName });
+
     const taskText = firstTask.trim();
     if (taskText) {
       addTask(taskText);
@@ -125,10 +136,28 @@ export default function Onboarding() {
               <div className="onboarding-feature-list">
                 <div><ListTodo size={18} /><span><strong>Plan simply</strong><small>Keep today’s work clear and visible.</small></span></div>
                 <div><Clock3 size={18} /><span><strong>Focus your way</strong><small>Use a duration that works for you.</small></span></div>
+                <div><User size={18} /><span><strong>Make it yours</strong><small>We'll ask your name next.</small></span></div>
               </div>
             )}
 
             {step === 1 && (
+              <div className="onboarding-field">
+                <label htmlFor="onboarding-name">Your name</label>
+                <input
+                  id="onboarding-name"
+                  className="input"
+                  type="text"
+                  value={name}
+                  maxLength={60}
+                  onChange={(event) => setName(event.target.value)}
+                  placeholder="Example: Ibrahem"
+                  autoFocus
+                />
+                <small>{name.length}/60</small>
+              </div>
+            )}
+
+            {step === 2 && (
               <div className="onboarding-field">
                 <label htmlFor="onboarding-first-task">My first task</label>
                 <input
@@ -145,7 +174,7 @@ export default function Onboarding() {
               </div>
             )}
 
-            {step === 2 && (
+            {step === 3 && (
               <div className="onboarding-duration-options" role="radiogroup" aria-label="Focus duration">
                 {SESSION_OPTIONS.map((minutes) => (
                   <button

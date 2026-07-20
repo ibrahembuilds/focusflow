@@ -210,7 +210,21 @@ export default function TaskList() {
                 <span style={{ color: 'var(--color-primary-light)', fontWeight: 700, fontSize: '0.8rem' }}>
                   {i + 1}
                 </span>
-                <span>{task}</span>
+                <span className="ai-result-text">{task.text}</span>
+                <span
+                  className={`badge ${
+                    task.priority === 'high'
+                      ? 'badge-danger'
+                      : task.priority === 'low'
+                        ? 'badge-primary'
+                        : 'badge-warning'
+                  }`}
+                >
+                  {task.priority}
+                </span>
+                <span className="ai-result-sessions">
+                  {task.estimatedSessions} {task.estimatedSessions === 1 ? 'session' : 'sessions'}
+                </span>
               </div>
             ))}
           </div>

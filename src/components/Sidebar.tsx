@@ -28,6 +28,8 @@ export default function Sidebar() {
   const { theme, setTheme, sidebarCollapsed, setSidebarCollapsed } = useStore();
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
+  const fullName = typeof user?.user_metadata?.fullName === 'string' ? user.user_metadata.fullName : '';
+  const displayName = fullName || user?.email || '?';
 
   async function handleSignOut() {
     await signOut();
@@ -114,11 +116,11 @@ export default function Sidebar() {
 
         {user && (
           <div className="sidebar-account">
-            <div className="sidebar-account-info" title={user.email}>
+            <div className="sidebar-account-info" title={displayName}>
               <span className="sidebar-account-avatar" aria-hidden="true">
-                {(user.email ?? '?').charAt(0).toUpperCase()}
+                {displayName.charAt(0).toUpperCase()}
               </span>
-              <span className="sidebar-account-email">{user.email}</span>
+              <span className="sidebar-account-email">{displayName}</span>
             </div>
             <button
               type="button"

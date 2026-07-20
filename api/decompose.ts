@@ -4,15 +4,25 @@ const MAX_GOAL_LENGTH = 2_000;
 const DECOMPOSE_PROMPT = `You are FocusFlow AI, a productivity assistant. Break the user's goal into practical subtasks.
 
 Rules:
-- Return only a JSON array of strings.
-- Start every subtask with a clear verb.
-- Create 4-8 subtasks in a logical order.
-- Keep each subtask small enough for one focus session.
-- Use simple, direct language.`;
+- Return a JSON object of the shape {"tasks": [{"text": string, "priority": "low"|"medium"|"high", "estimatedSessions": number}]}.
+- Start every subtask's text with a clear verb.
+- Create 4-8 subtasks in a logical, sequential order.
+- Keep each subtask small enough to finish in one or two focus sessions.
+- priority reflects how urgent/foundational the step is: "high" for blocking or time-sensitive steps, "medium" for normal steps, "low" for optional or nice-to-have steps.
+- estimatedSessions is a whole number from 1 to 4 — a realistic guess at how many 25-minute focus sessions the subtask takes.
+- Use simple, direct language. Return only the JSON object, no other text.`;
 
 type OpenAIResponse = {
   choices?: Array<{ message?: { content?: string } }>;
 };
+
+type Priority = 'low' | 'medium' | 'high';
+
+interface DecomposedTask {
+  text: string;
+  priority: Priority;
+  estimatedSessions: number;
+}
 
 function json(data: unknown, status = 200) {
   return Response.json(data, {
@@ -21,16 +31,33 @@ function json(data: unknown, status = 200) {
   });
 }
 
-function parseTasks(content: string): string[] {
-  const arrayMatch = content.match(/\[[\s\S]*\]/);
-  const candidate = arrayMatch?.[0] ?? content;
+function parseTasks(content: string): DecomposedTask[] {
+  const objectMatch = content.match(/\{[\s\S]*\}/);
+  const candidate = objectMatch?.[0] ?? content;
 
   try {
     const parsed: unknown = JSON.parse(candidate);
-    if (!Array.isArray(parsed)) return [];
-    return parsed.filter(
-      (task): task is string => typeof task === 'string' && task.trim().length > 0,
-    );
+    const rawTasks =
+      parsed && typeof parsed === 'object' && 'tasks' in parsed && Array.isArray((parsed as any).tasks)
+        ? (parsed as any).tasks
+        : Array.isArray(parsed)
+          ? parsed
+          : [];
+
+    return rawTasks.reduce<DecomposedTask[]>((acc, item) => {
+      const text = typeof item === 'string' ? item : typeof item?.text === 'string' ? item.text : '';
+      if (!text.trim()) return acc;
+
+      const priority: Priority =
+        item?.priority === 'high' || item?.priority === 'low' ? item.priority : 'medium';
+      const estimatedSessions =
+        typeof item?.estimatedSessions === 'number' && Number.isFinite(item.estimatedSessions)
+          ? Math.min(4, Math.max(1, Math.round(item.estimatedSessions)))
+          : 1;
+
+      acc.push({ text: text.trim(), priority, estimatedSessions });
+      return acc;
+    }, []);
   } catch {
     return [];
   }
@@ -78,7 +105,8 @@ export default {
             { role: 'user', content: goal },
           ],
           temperature: 0.6,
-          max_tokens: 500,
+          max_tokens: 800,
+          response_format: { type: 'json_object' },
         }),
       });
 

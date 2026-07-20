@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Trash2, Download, AlertTriangle, Sun, Moon, Palette, Check, CircleHelp } from 'lucide-react';
 import { useStore } from '../store';
+import { useAuth } from '../lib/auth';
 
 const COLOR_OPTIONS = [
   { id: 'forest', label: 'Forest' },
@@ -24,7 +25,24 @@ export default function Settings() {
     setAccentColor,
     setHasCompletedOnboarding,
   } = useStore();
+  const { user, updateProfile } = useAuth();
   const [showReset, setShowReset] = useState(false);
+  const [fullName, setFullName] = useState('');
+  const [savingProfile, setSavingProfile] = useState(false);
+  const [profileSaved, setProfileSaved] = useState(false);
+
+  useEffect(() => {
+    const metadataName = user?.user_metadata?.fullName;
+    setFullName(typeof metadataName === 'string' ? metadataName : '');
+  }, [user]);
+
+  async function handleSaveProfile() {
+    setSavingProfile(true);
+    await updateProfile({ fullName: fullName.trim() });
+    setSavingProfile(false);
+    setProfileSaved(true);
+    setTimeout(() => setProfileSaved(false), 2000);
+  }
 
   function handleExport() {
     const data = {
@@ -57,6 +75,44 @@ export default function Settings() {
       </div>
 
       <div className="settings-stack">
+        <section className="card" aria-labelledby="profile-title">
+          <h2 className="settings-title" id="profile-title">Profile</h2>
+          <p className="settings-description">Your name shows up in the sidebar and your dashboard greeting.</p>
+          <div className="settings-fields">
+            <div>
+              <label className="field-label" htmlFor="profile-name">Name</label>
+              <input
+                id="profile-name"
+                className="input"
+                type="text"
+                maxLength={60}
+                value={fullName}
+                onChange={(event) => setFullName(event.target.value)}
+                placeholder="Add your name"
+              />
+            </div>
+            <div>
+              <label className="field-label" htmlFor="profile-email">Email</label>
+              <input id="profile-email" className="input" type="email" value={user?.email ?? ''} readOnly />
+            </div>
+          </div>
+          <div className="profile-actions">
+            <button
+              className="btn btn-primary btn-sm"
+              onClick={handleSaveProfile}
+              disabled={savingProfile}
+            >
+              {savingProfile ? 'Saving…' : 'Save name'}
+            </button>
+            {profileSaved && <span className="profile-saved-note">Saved</span>}
+          </div>
+          {user?.created_at && (
+            <small className="profile-member-since">
+              Member since {new Date(user.created_at).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+            </small>
+          )}
+        </section>
+
         <section className="card" aria-labelledby="appearance-title">
           <h2 className="settings-title" id="appearance-title">Appearance</h2>
           <p className="settings-description">Choose a theme and one app color. Changes apply instantly.</p>

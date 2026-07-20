@@ -6,7 +6,7 @@ import {
   upsertTaskRemote,
   deleteTaskRemote,
   insertSessionRemote,
-  updateOnboardingRemote,
+  updateUserMetadata,
 } from './lib/sync';
 
 export interface AuthUser {
@@ -37,6 +37,12 @@ export interface TimerSession {
 
 export type AccentColor = 'forest' | 'ocean' | 'violet' | 'rose' | 'amber';
 
+export interface DecomposedTask {
+  text: string;
+  priority: NonNullable<Task['priority']>;
+  estimatedSessions: number;
+}
+
 export interface FocusFlowState {
   // Appearance
   theme: 'light' | 'dark';
@@ -56,7 +62,7 @@ export interface FocusFlowState {
   // Tasks
   tasks: Task[];
   addTask: (text: string, priority?: Task['priority']) => void;
-  addTasks: (texts: string[]) => void;
+  addTasks: (items: { text: string; priority?: Task['priority'] }[]) => void;
   toggleTask: (id: string) => void;
   deleteTask: (id: string) => void;
   reorderTasks: (fromIndex: number, toIndex: number) => void;
@@ -80,9 +86,9 @@ export interface FocusFlowState {
 
   // AI Decompose
   isDecomposing: boolean;
-  decomposeResult: string[];
+  decomposeResult: DecomposedTask[];
   setDecomposing: (v: boolean) => void;
-  setDecomposeResult: (results: string[]) => void;
+  setDecomposeResult: (results: DecomposedTask[]) => void;
   clearDecompose: () => void;
 
 }
@@ -96,15 +102,21 @@ export const useStore = create<FocusFlowState>()(
     (set, get) => ({
       // Appearance
       theme: 'light',
-      setTheme: (theme) => set({ theme }),
+      setTheme: (theme) => {
+        set({ theme });
+        if (get().userId) void updateUserMetadata({ theme });
+      },
       accentColor: 'forest',
-      setAccentColor: (accentColor) => set({ accentColor }),
+      setAccentColor: (accentColor) => {
+        set({ accentColor });
+        if (get().userId) void updateUserMetadata({ accentColor });
+      },
       sidebarCollapsed: false,
       setSidebarCollapsed: (sidebarCollapsed) => set({ sidebarCollapsed }),
       hasCompletedOnboarding: false,
       setHasCompletedOnboarding: (hasCompletedOnboarding) => {
         set({ hasCompletedOnboarding });
-        if (get().userId) void updateOnboardingRemote(hasCompletedOnboarding);
+        if (get().userId) void updateUserMetadata({ hasCompletedOnboarding });
       },
 
       // ── Auth-scoped data sync ──
@@ -116,10 +128,29 @@ export const useStore = create<FocusFlowState>()(
           set({ userId: null, tasks: [], sessions: [] });
           return;
         }
-        // Onboarding is tied to the account, not the browser, so a new user
-        // sees it exactly once no matter which device they sign in from.
-        const hasCompletedOnboarding = user.user_metadata?.hasCompletedOnboarding === true;
-        set({ userId: user.id, isSyncing: true, hasCompletedOnboarding });
+        // Preferences and onboarding state are tied to the account, not the
+        // browser, so they follow a user across devices. Only apply a value
+        // from the server when it's actually been set — otherwise keep
+        // whatever this browser already has (e.g. a brand-new account).
+        const metadata = user.user_metadata ?? {};
+        const patch: Partial<FocusFlowState> = { userId: user.id, isSyncing: true };
+        if (typeof metadata.hasCompletedOnboarding === 'boolean') {
+          patch.hasCompletedOnboarding = metadata.hasCompletedOnboarding;
+        }
+        if (metadata.theme === 'light' || metadata.theme === 'dark') {
+          patch.theme = metadata.theme;
+        }
+        if (typeof metadata.accentColor === 'string') {
+          patch.accentColor = metadata.accentColor as AccentColor;
+        }
+        if (typeof metadata.timerMinutes === 'number') {
+          patch.timerMinutes = metadata.timerMinutes;
+        }
+        if (typeof metadata.breakMinutes === 'number') {
+          patch.breakMinutes = metadata.breakMinutes;
+        }
+        set(patch);
+
         const [tasks, sessions] = await Promise.all([
           fetchUserTasks(user.id),
           fetchUserSessions(user.id),
@@ -139,14 +170,14 @@ export const useStore = create<FocusFlowState>()(
         if (userId) void upsertTaskRemote(userId, newTask);
       },
 
-      addTasks: (texts) => {
-        const newTasks: Task[] = texts.map((t) => ({
+      addTasks: (items) => {
+        const newTasks: Task[] = items.map((item) => ({
           id: uid(),
-          text: t,
+          text: item.text,
           completed: false,
           sessions: 0,
           createdAt: today(),
-          priority: 'medium' as const,
+          priority: item.priority ?? 'medium',
         }));
         set((s) => ({ tasks: [...newTasks, ...s.tasks] }));
         const userId = get().userId;
@@ -199,8 +230,14 @@ export const useStore = create<FocusFlowState>()(
 
       setTimerRunning: (running) => set({ timerRunning: running }),
       setTimerPaused: (paused) => set({ timerPaused: paused }),
-      setTimerMinutes: (minutes) => set({ timerMinutes: minutes }),
-      setBreakMinutes: (minutes) => set({ breakMinutes: minutes }),
+      setTimerMinutes: (minutes) => {
+        set({ timerMinutes: minutes });
+        if (get().userId) void updateUserMetadata({ timerMinutes: minutes });
+      },
+      setBreakMinutes: (minutes) => {
+        set({ breakMinutes: minutes });
+        if (get().userId) void updateUserMetadata({ breakMinutes: minutes });
+      },
       setActiveTaskId: (id) => set({ activeTaskId: id }),
 
       // ── Sessions ──
