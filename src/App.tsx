@@ -59,7 +59,10 @@ function StoreAuthBridge() {
   const hydrateForUser = useStore((state) => state.hydrateForUser);
 
   useEffect(() => {
-    void hydrateForUser(user?.id ?? null);
+    // Depend on the id only — Supabase emits a fresh `user` object on token
+    // refresh too, and re-fetching tasks/sessions on every refresh would be wasted work.
+    void hydrateForUser(user ? { id: user.id, user_metadata: user.user_metadata } : null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id, hydrateForUser]);
 
   return null;

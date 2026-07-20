@@ -6,7 +6,13 @@ import {
   upsertTaskRemote,
   deleteTaskRemote,
   insertSessionRemote,
+  updateOnboardingRemote,
 } from './lib/sync';
+
+export interface AuthUser {
+  id: string;
+  user_metadata?: Record<string, unknown>;
+}
 
 // ── Types ──
 export interface Task {
@@ -45,7 +51,7 @@ export interface FocusFlowState {
   // Auth-scoped data sync
   userId: string | null;
   isSyncing: boolean;
-  hydrateForUser: (userId: string | null) => Promise<void>;
+  hydrateForUser: (user: AuthUser | null) => Promise<void>;
 
   // Tasks
   tasks: Task[];
@@ -96,24 +102,30 @@ export const useStore = create<FocusFlowState>()(
       sidebarCollapsed: false,
       setSidebarCollapsed: (sidebarCollapsed) => set({ sidebarCollapsed }),
       hasCompletedOnboarding: false,
-      setHasCompletedOnboarding: (hasCompletedOnboarding) => set({ hasCompletedOnboarding }),
+      setHasCompletedOnboarding: (hasCompletedOnboarding) => {
+        set({ hasCompletedOnboarding });
+        if (get().userId) void updateOnboardingRemote(hasCompletedOnboarding);
+      },
 
       // ── Auth-scoped data sync ──
       userId: null,
       isSyncing: false,
 
-      hydrateForUser: async (userId) => {
-        if (!userId) {
+      hydrateForUser: async (user) => {
+        if (!user) {
           set({ userId: null, tasks: [], sessions: [] });
           return;
         }
-        set({ userId, isSyncing: true });
+        // Onboarding is tied to the account, not the browser, so a new user
+        // sees it exactly once no matter which device they sign in from.
+        const hasCompletedOnboarding = user.user_metadata?.hasCompletedOnboarding === true;
+        set({ userId: user.id, isSyncing: true, hasCompletedOnboarding });
         const [tasks, sessions] = await Promise.all([
-          fetchUserTasks(userId),
-          fetchUserSessions(userId),
+          fetchUserTasks(user.id),
+          fetchUserSessions(user.id),
         ]);
         // Bail if the user switched again while this fetch was in flight.
-        if (get().userId !== userId) return;
+        if (get().userId !== user.id) return;
         set({ tasks, sessions, isSyncing: false });
       },
 

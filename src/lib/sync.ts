@@ -107,3 +107,8 @@ export async function insertSessionRemote(userId: string, session: TimerSession)
   });
   if (error) console.error('Failed to save session:', error.message);
 }
+
+export async function updateOnboardingRemote(completed: boolean) {
+  const { error } = await supabase.auth.updateUser({ data: { hasCompletedOnboarding: completed } });
+  if (error) console.error('Failed to save onboarding state:', error.message);
+}

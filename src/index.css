@@ -576,6 +576,61 @@ h3 {
   font-size: 0.67rem;
 }
 
+.sidebar-account {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  margin-top: 0.4rem;
+  padding-top: 0.6rem;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.sidebar-account-info {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.4rem 0.72rem;
+  min-width: 0;
+}
+
+.sidebar-account-avatar {
+  display: grid;
+  width: 1.9rem;
+  height: 1.9rem;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--color-primary) 16%, transparent);
+  color: var(--color-primary-light);
+  font-family: var(--font-display);
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.sidebar-account-email {
+  overflow: hidden;
+  color: var(--text-secondary);
+  font-size: 0.76rem;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sidebar-signout:hover {
+  border-color: color-mix(in srgb, var(--color-danger) 25%, transparent);
+  background: color-mix(in srgb, var(--color-danger) 8%, transparent);
+  color: var(--color-danger-light);
+}
+
+.sidebar-collapsed .sidebar-account-email {
+  display: none;
+}
+
+.sidebar-collapsed .sidebar-account-info {
+  justify-content: center;
+  padding-inline: 0.55rem;
+}
+
 .main-content {
   width: calc(100% - var(--sidebar-width));
   margin-left: var(--sidebar-width);
@@ -2141,6 +2196,7 @@ h3 {
   }
 
   .nav-item {
+    width: auto;
     min-width: 66px;
     min-height: 56px;
     flex: 0 0 auto;
@@ -2391,62 +2447,6 @@ h3 {
   .onboarding-duration-options button {
     min-height: 72px;
   }
-}
-
-/* ── Sidebar account ── */
-.sidebar-account {
-  display: flex;
-  flex-direction: column;
-  gap: 0.2rem;
-  margin-top: 0.4rem;
-  padding-top: 0.6rem;
-  border-top: 1px solid var(--border-subtle);
-}
-
-.sidebar-account-info {
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-  padding: 0.4rem 0.72rem;
-  min-width: 0;
-}
-
-.sidebar-account-avatar {
-  display: grid;
-  width: 1.9rem;
-  height: 1.9rem;
-  flex: 0 0 auto;
-  place-items: center;
-  border-radius: 50%;
-  background: color-mix(in srgb, var(--color-primary) 16%, transparent);
-  color: var(--color-primary-light);
-  font-family: var(--font-display);
-  font-size: 0.8rem;
-  font-weight: 700;
-}
-
-.sidebar-account-email {
-  overflow: hidden;
-  color: var(--text-secondary);
-  font-size: 0.76rem;
-  font-weight: 600;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.sidebar-signout:hover {
-  border-color: color-mix(in srgb, var(--color-danger) 25%, transparent);
-  background: color-mix(in srgb, var(--color-danger) 8%, transparent);
-  color: var(--color-danger-light);
-}
-
-.sidebar-collapsed .sidebar-account-email {
-  display: none;
-}
-
-.sidebar-collapsed .sidebar-account-info {
-  justify-content: center;
-  padding-inline: 0.55rem;
 }
 
 /* ── Auth pages (Login / Signup) ── */
