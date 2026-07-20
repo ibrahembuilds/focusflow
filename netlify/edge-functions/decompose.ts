@@ -104,14 +104,16 @@ export default async (request: Request) => {
           { role: 'system', content: DECOMPOSE_PROMPT },
           { role: 'user', content: goal },
         ],
-        temperature: 0.6,
-        max_tokens: 800,
+        // max_completion_tokens (not the legacy max_tokens) and no custom
+        // temperature — newer model generations reject both of those.
+        max_completion_tokens: 800,
         response_format: { type: 'json_object' },
       }),
     });
 
     if (!response.ok) {
-      console.error('OpenAI request failed:', response.status);
+      const errorBody = await response.text().catch(() => '');
+      console.error('OpenAI request failed:', response.status, errorBody);
       return json({ error: 'AI could not process this goal. Try again shortly.' }, 502);
     }
 
