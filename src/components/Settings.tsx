@@ -1,0 +1,180 @@
+import { useState } from 'react';
+import { Trash2, Download, AlertTriangle, Sun, Moon, Palette, Check, CircleHelp } from 'lucide-react';
+import { useStore } from '../store';
+
+const COLOR_OPTIONS = [
+  { id: 'forest', label: 'Forest' },
+  { id: 'ocean', label: 'Ocean' },
+  { id: 'violet', label: 'Violet' },
+  { id: 'rose', label: 'Rose' },
+  { id: 'amber', label: 'Amber' },
+] as const;
+
+export default function Settings() {
+  const {
+    tasks,
+    sessions,
+    timerMinutes,
+    breakMinutes,
+    setTimerMinutes,
+    setBreakMinutes,
+    theme,
+    setTheme,
+    accentColor,
+    setAccentColor,
+    setHasCompletedOnboarding,
+  } = useStore();
+  const [showReset, setShowReset] = useState(false);
+
+  function handleExport() {
+    const data = {
+      tasks,
+      sessions,
+      exportedAt: new Date().toISOString(),
+      version: '1.0',
+    };
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = `focusflow-backup-${new Date().toISOString().split('T')[0]}.json`;
+    anchor.click();
+    URL.revokeObjectURL(url);
+  }
+
+  function handleReset() {
+    localStorage.removeItem('focusflow-storage');
+    window.location.reload();
+  }
+
+  return (
+    <div className="animate-in">
+      <div className="page-header">
+        <div>
+          <h1 className="page-title">Settings</h1>
+          <p className="page-subtitle">Tune the workspace to fit the way you focus.</p>
+        </div>
+      </div>
+
+      <div className="settings-stack">
+        <section className="card" aria-labelledby="appearance-title">
+          <h2 className="settings-title" id="appearance-title">Appearance</h2>
+          <p className="settings-description">Choose a theme and one app color. Changes apply instantly.</p>
+          <div className="theme-options" role="group" aria-label="Color theme">
+            <button
+              type="button"
+              className={`theme-option${theme === 'light' ? ' active' : ''}`}
+              onClick={() => setTheme('light')}
+              aria-pressed={theme === 'light'}
+            >
+              <Sun size={18} />
+              <span><strong>Light</strong><small>Bright and clear</small></span>
+            </button>
+            <button
+              type="button"
+              className={`theme-option${theme === 'dark' ? ' active' : ''}`}
+              onClick={() => setTheme('dark')}
+              aria-pressed={theme === 'dark'}
+            >
+              <Moon size={18} />
+              <span><strong>Dark</strong><small>Calm in low light</small></span>
+            </button>
+          </div>
+          <div className="color-setting-heading">
+            <Palette size={17} aria-hidden="true" />
+            <span>App color</span>
+          </div>
+          <div className="color-options" role="group" aria-label="App color">
+            {COLOR_OPTIONS.map((option) => (
+              <button
+                key={option.id}
+                type="button"
+                className={`color-option color-${option.id}${accentColor === option.id ? ' active' : ''}`}
+                onClick={() => setAccentColor(option.id)}
+                aria-pressed={accentColor === option.id}
+              >
+                <span className="color-swatch" aria-hidden="true" />
+                <span>{option.label}</span>
+                {accentColor === option.id && <Check size={14} aria-hidden="true" />}
+              </button>
+            ))}
+          </div>
+        </section>
+
+        <section className="card" aria-labelledby="timer-title">
+          <h2 className="settings-title" id="timer-title">Default timer durations</h2>
+          <div className="settings-fields">
+            <div>
+              <label className="field-label" htmlFor="focus-minutes">Focus minutes</label>
+              <input
+                id="focus-minutes"
+                className="input"
+                type="number"
+                min={1}
+                max={240}
+                value={timerMinutes}
+                onChange={(event) => setTimerMinutes(Math.max(1, Math.min(240, parseInt(event.target.value) || 25)))}
+              />
+            </div>
+            <div>
+              <label className="field-label" htmlFor="break-minutes">Break minutes</label>
+              <input
+                id="break-minutes"
+                className="input"
+                type="number"
+                min={1}
+                max={30}
+                value={breakMinutes}
+                onChange={(event) => setBreakMinutes(Math.max(1, Math.min(30, parseInt(event.target.value) || 5)))}
+              />
+            </div>
+          </div>
+        </section>
+
+        <section className="card" aria-labelledby="data-title">
+          <h2 className="settings-title" id="data-title">Data management</h2>
+          <div className="settings-actions">
+            <button className="btn btn-ghost" onClick={handleExport}>
+              <Download size={16} />
+              Export data
+            </button>
+
+            {!showReset ? (
+              <button className="btn btn-danger" onClick={() => setShowReset(true)}>
+                <Trash2 size={16} />
+                Reset all data
+              </button>
+            ) : (
+              <div className="danger-confirmation" role="alert">
+                <div className="danger-message">
+                  <AlertTriangle size={17} />
+                  <span>This deletes every task and focus session. It cannot be undone.</span>
+                </div>
+                <div className="danger-actions">
+                  <button className="btn btn-danger btn-sm" onClick={handleReset}>Reset everything</button>
+                  <button className="btn btn-ghost btn-sm" onClick={() => setShowReset(false)}>Cancel</button>
+                </div>
+              </div>
+            )}
+          </div>
+        </section>
+
+        <section className="card about-card" aria-labelledby="about-title">
+          <h2 className="settings-title" id="about-title">About FocusFlow</h2>
+          <p>
+            FocusFlow brings tasks, focus sessions, planning, and AI-assisted task breakdowns into one calm workspace.
+          </p>
+          <button
+            type="button"
+            className="btn btn-ghost btn-sm onboarding-replay"
+            onClick={() => setHasCompletedOnboarding(false)}
+          >
+            <CircleHelp size={15} />
+            Show welcome guide
+          </button>
+          <small>Version 1.0.0</small>
+        </section>
+      </div>
+    </div>
+  );
+}
