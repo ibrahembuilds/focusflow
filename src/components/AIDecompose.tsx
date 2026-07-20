@@ -4,15 +4,6 @@ import { Sparkles, ArrowRight, Bot, Lightbulb } from 'lucide-react';
 import { useStore } from '../store';
 import { decomposeTask } from '../lib/api';
 
-const EXAMPLE_GOALS = [
-  'Launch a Shopify store',
-  'Plan a wedding',
-  'Learn TypeScript',
-  'Write a business plan',
-  'Build a personal brand on X',
-  'Organize a conference',
-];
-
 export default function AIDecompose() {
   const { isDecomposing, setDecomposing, setDecomposeResult } = useStore();
   const navigate = useNavigate();
@@ -39,10 +30,6 @@ export default function AIDecompose() {
     } finally {
       setDecomposing(false);
     }
-  }
-
-  function handleExampleClick(example: string) {
-    setGoal(example);
   }
 
   return (
@@ -121,24 +108,6 @@ export default function AIDecompose() {
               </>
             )}
           </button>
-
-          {/* Examples */}
-          <div style={{ marginTop: '1.5rem' }}>
-            <p style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)', marginBottom: '0.75rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-              Try an example
-            </p>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
-              {EXAMPLE_GOALS.map((ex) => (
-                <button
-                  key={ex}
-                  className="btn btn-ghost btn-sm"
-                  onClick={() => handleExampleClick(ex)}
-                >
-                  {ex}
-                </button>
-              ))}
-            </div>
-          </div>
         </div>
 
         {/* Result preview / info */}
