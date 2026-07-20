@@ -64,7 +64,7 @@ npm run build
 FocusFlow needs two services configured — see [`.env.example`](.env.example) for the full list:
 
 1. **Supabase** — create a project, run [`supabase/schema.sql`](supabase/schema.sql) in the SQL editor, then set `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`.
-2. **OpenAI** — used by the AI task breakdown feature. Set `OPENAI_API_KEY` (server-side only, used by [`api/decompose.ts`](api/decompose.ts)).
+2. **OpenAI** — used by the AI task breakdown feature. The app deploys to Netlify; set `OPENAI_API_KEY` (and optionally `OPENAI_MODEL`) as environment variables in Netlify's site settings — they're read server-side by the edge function at [`netlify/edge-functions/decompose.ts`](netlify/edge-functions/decompose.ts), never exposed to the browser.
 
 ## 🏗️ Architecture
 

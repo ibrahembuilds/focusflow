@@ -1,3 +1,4 @@
+// Netlify Edge Function (Deno runtime) — registered in netlify.toml against /api/decompose.
 const OPENAI_URL = 'https://api.openai.com/v1/chat/completions';
 const MAX_GOAL_LENGTH = 2_000;
 
@@ -63,70 +64,68 @@ function parseTasks(content: string): DecomposedTask[] {
   }
 }
 
-export default {
-  async fetch(request: Request) {
-    if (request.method !== 'POST') {
-      return json({ error: 'Method not allowed.' }, 405);
+export default async (request: Request) => {
+  if (request.method !== 'POST') {
+    return json({ error: 'Method not allowed.' }, 405);
+  }
+
+  const apiKey = Deno.env.get('OPENAI_API_KEY');
+  if (!apiKey) {
+    return json({ error: 'AI is not configured. Add OPENAI_API_KEY in Netlify site settings.' }, 503);
+  }
+
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return json({ error: 'Invalid request body.' }, 400);
+  }
+
+  const goal =
+    typeof body === 'object' && body !== null && 'goal' in body && typeof (body as any).goal === 'string'
+      ? (body as any).goal.trim()
+      : '';
+
+  if (!goal) return json({ error: 'Enter a goal first.' }, 400);
+  if (goal.length > MAX_GOAL_LENGTH) {
+    return json({ error: 'Keep the goal under 2,000 characters.' }, 400);
+  }
+
+  try {
+    const response = await fetch(OPENAI_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: Deno.env.get('OPENAI_MODEL') || 'gpt-4o-mini',
+        messages: [
+          { role: 'system', content: DECOMPOSE_PROMPT },
+          { role: 'user', content: goal },
+        ],
+        temperature: 0.6,
+        max_tokens: 800,
+        response_format: { type: 'json_object' },
+      }),
+    });
+
+    if (!response.ok) {
+      console.error('OpenAI request failed:', response.status);
+      return json({ error: 'AI could not process this goal. Try again shortly.' }, 502);
     }
 
-    const apiKey = process.env.OPENAI_API_KEY;
-    if (!apiKey) {
-      return json({ error: 'AI is not configured. Add OPENAI_API_KEY in Vercel.' }, 503);
+    const result = (await response.json()) as OpenAIResponse;
+    const content = result.choices?.[0]?.message?.content?.trim() ?? '';
+    const tasks = parseTasks(content);
+
+    if (tasks.length === 0) {
+      return json({ error: 'AI returned an unexpected response. Try wording the goal differently.' }, 502);
     }
 
-    let body: unknown;
-    try {
-      body = await request.json();
-    } catch {
-      return json({ error: 'Invalid request body.' }, 400);
-    }
-
-    const goal =
-      typeof body === 'object' && body !== null && 'goal' in body && typeof body.goal === 'string'
-        ? body.goal.trim()
-        : '';
-
-    if (!goal) return json({ error: 'Enter a goal first.' }, 400);
-    if (goal.length > MAX_GOAL_LENGTH) {
-      return json({ error: 'Keep the goal under 2,000 characters.' }, 400);
-    }
-
-    try {
-      const response = await fetch(OPENAI_URL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${apiKey}`,
-        },
-        body: JSON.stringify({
-          model: process.env.OPENAI_MODEL || 'gpt-4o-mini',
-          messages: [
-            { role: 'system', content: DECOMPOSE_PROMPT },
-            { role: 'user', content: goal },
-          ],
-          temperature: 0.6,
-          max_tokens: 800,
-          response_format: { type: 'json_object' },
-        }),
-      });
-
-      if (!response.ok) {
-        console.error('OpenAI request failed:', response.status);
-        return json({ error: 'AI could not process this goal. Try again shortly.' }, 502);
-      }
-
-      const result = (await response.json()) as OpenAIResponse;
-      const content = result.choices?.[0]?.message?.content?.trim() ?? '';
-      const tasks = parseTasks(content);
-
-      if (tasks.length === 0) {
-        return json({ error: 'AI returned an unexpected response. Try wording the goal differently.' }, 502);
-      }
-
-      return json({ tasks });
-    } catch (error) {
-      console.error('AI function error:', error instanceof Error ? error.message : 'Unknown error');
-      return json({ error: 'AI service is temporarily unavailable.' }, 502);
-    }
-  },
+    return json({ tasks });
+  } catch (error) {
+    console.error('AI function error:', error instanceof Error ? error.message : 'Unknown error');
+    return json({ error: 'AI service is temporarily unavailable.' }, 502);
+  }
 };
