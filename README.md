@@ -90,4 +90,4 @@ src/
 
 ## 📄 License
 
-MIT © Ibrahim Ahmed
+MIT © Ibrahem Ahmed
