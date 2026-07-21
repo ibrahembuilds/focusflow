@@ -5,3 +5,7 @@
 [[edge_functions]]
   path = "/api/decompose"
   function = "decompose"
+
+[[edge_functions]]
+  path = "/api/clarify"
+  function = "clarify"

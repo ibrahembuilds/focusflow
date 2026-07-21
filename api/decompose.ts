@@ -92,6 +92,26 @@ export default async function handler(request: Request): Promise<Response> {
     return json({ error: 'Keep the goal under 2,000 characters.' }, 400);
   }
 
+  const rawAnswers =
+    typeof body === 'object' && body !== null && 'answers' in body && Array.isArray((body as any).answers)
+      ? (body as any).answers
+      : [];
+
+  const answers: { question: string; answer: string }[] = rawAnswers
+    .filter(
+      (a: any) =>
+        a && typeof a.question === 'string' && typeof a.answer === 'string' && a.answer.trim().length > 0,
+    )
+    .map((a: any) => ({ question: a.question.trim(), answer: a.answer.trim().slice(0, 300) }))
+    .slice(0, 6);
+
+  const userContent =
+    answers.length > 0
+      ? `Goal: ${goal}\n\nAdditional context from the user:\n${answers
+          .map((a) => `Q: ${a.question}\nA: ${a.answer}`)
+          .join('\n')}`
+      : goal;
+
   try {
     const response = await fetch(OPENAI_URL, {
       method: 'POST',
@@ -103,7 +123,7 @@ export default async function handler(request: Request): Promise<Response> {
         model: process.env.OPENAI_MODEL || 'gpt-4o-mini',
         messages: [
           { role: 'system', content: DECOMPOSE_PROMPT },
-          { role: 'user', content: goal },
+          { role: 'user', content: userContent },
         ],
         // max_completion_tokens (not the legacy max_tokens) and no custom
         // temperature — newer model generations reject both of those.

@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import {
   DndContext,
   closestCenter,
@@ -123,6 +123,11 @@ export default function TaskList() {
 
   const [newTaskText, setNewTaskText] = useState('');
   const [priority, setPriority] = useState<Task['priority']>('medium');
+  const [selectedIndices, setSelectedIndices] = useState<Set<number>>(new Set());
+
+  useEffect(() => {
+    setSelectedIndices(new Set(decomposeResult.map((_, i) => i)));
+  }, [decomposeResult]);
 
   const todaysTasks = getTodaysTasks(tasks);
   const active = todaysTasks.filter((t) => !t.completed);
@@ -164,9 +169,19 @@ export default function TaskList() {
     navigate('/app/timer');
   }
 
+  function toggleDecomposedSelection(index: number) {
+    setSelectedIndices((prev) => {
+      const next = new Set(prev);
+      if (next.has(index)) next.delete(index);
+      else next.add(index);
+      return next;
+    });
+  }
+
   function handleAddDecomposed() {
-    if (decomposeResult.length > 0) {
-      addTasks(decomposeResult);
+    const selected = decomposeResult.filter((_, i) => selectedIndices.has(i));
+    if (selected.length > 0) {
+      addTasks(selected);
       clearDecompose();
     }
   }
@@ -200,16 +215,35 @@ export default function TaskList() {
             <div>
               <h3 style={{ fontSize: '0.95rem' }}>AI Suggestions Ready</h3>
               <p style={{ fontSize: '0.8rem', color: 'var(--text-tertiary)' }}>
-                {decomposeResult.length} tasks generated
+                {selectedIndices.size} of {decomposeResult.length} selected
               </p>
             </div>
+            <button
+              type="button"
+              className="btn btn-ghost btn-sm ai-select-toggle"
+              onClick={() =>
+                setSelectedIndices(
+                  selectedIndices.size === decomposeResult.length
+                    ? new Set()
+                    : new Set(decomposeResult.map((_, i) => i))
+                )
+              }
+            >
+              {selectedIndices.size === decomposeResult.length ? 'Deselect all' : 'Select all'}
+            </button>
           </div>
           <div className="ai-result-list">
             {decomposeResult.map((task, i) => (
               <div key={i} className="ai-result-item">
-                <span style={{ color: 'var(--color-primary-light)', fontWeight: 700, fontSize: '0.8rem' }}>
-                  {i + 1}
-                </span>
+                <button
+                  type="button"
+                  className={`task-check ${selectedIndices.has(i) ? 'done' : ''}`}
+                  onClick={() => toggleDecomposedSelection(i)}
+                  aria-pressed={selectedIndices.has(i)}
+                  aria-label={selectedIndices.has(i) ? 'Deselect task' : 'Select task'}
+                >
+                  {selectedIndices.has(i) && <Check size={12} strokeWidth={3} />}
+                </button>
                 <span className="ai-result-text">{task.text}</span>
                 <span
                   className={`badge ${
@@ -229,9 +263,9 @@ export default function TaskList() {
             ))}
           </div>
           <div className="ai-add-all" style={{ display: 'flex', gap: '0.5rem' }}>
-            <button className="btn btn-primary" onClick={handleAddDecomposed}>
+            <button className="btn btn-primary" onClick={handleAddDecomposed} disabled={selectedIndices.size === 0}>
               <Plus size={14} />
-              Add All to Today
+              Add {selectedIndices.size > 0 ? selectedIndices.size : ''} to Today
             </button>
             <button className="btn btn-ghost" onClick={clearDecompose}>
               Dismiss
