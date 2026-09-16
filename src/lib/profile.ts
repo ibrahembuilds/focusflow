@@ -14,6 +14,8 @@ export interface Profile {
   bio: string | null;
   avatarEmoji: string;
   avatarColor: AvatarColor;
+  /** An uploaded photo. When set, it's shown instead of the emoji. */
+  avatarUrl: string | null;
   /** Whether /u/<username> answers at all. */
   isPublic: boolean;
   showStreak: boolean;
@@ -29,6 +31,7 @@ export interface PublicProfile {
   bio: string | null;
   avatarEmoji: string;
   avatarColor: AvatarColor;
+  avatarUrl: string | null;
   memberSince: string;
   /** Null when the owner keeps that number to themselves. */
   completedTotal: number | null;
@@ -47,6 +50,7 @@ interface ProfileRow {
   bio: string | null;
   avatar_emoji: string | null;
   avatar_color: string | null;
+  avatar_url: string | null;
   is_public: boolean | null;
   show_streak: boolean | null;
   show_focus_time: boolean | null;
@@ -60,6 +64,7 @@ interface PublicProfileRow {
   bio: string | null;
   avatar_emoji: string | null;
   avatar_color: string | null;
+  avatar_url: string | null;
   member_since: string;
   completed_total: number | null;
   focus_seconds_total: number | null;
@@ -78,6 +83,7 @@ function fromRow(row: ProfileRow): Profile {
     bio: row.bio,
     avatarEmoji: row.avatar_emoji || '🌱',
     avatarColor: asAvatarColor(row.avatar_color),
+    avatarUrl: row.avatar_url || null,
     isPublic: row.is_public ?? true,
     showStreak: row.show_streak ?? true,
     showFocusTime: row.show_focus_time ?? true,
@@ -137,6 +143,8 @@ export interface ProfileDraft {
   bio?: string | null;
   avatarEmoji?: string;
   avatarColor?: AvatarColor;
+  /** An uploaded photo's public URL, or null to fall back to the emoji. */
+  avatarUrl?: string | null;
   isPublic?: boolean;
   showStreak?: boolean;
   showFocusTime?: boolean;
@@ -169,6 +177,7 @@ export async function saveProfile(
       bio,
       avatar_emoji: values.avatarEmoji ?? '🌱',
       avatar_color: values.avatarColor ?? 'forest',
+      avatar_url: values.avatarUrl ?? null,
       is_public: values.isPublic ?? true,
       show_streak: values.showStreak ?? true,
       show_focus_time: values.showFocusTime ?? true,
@@ -210,6 +219,7 @@ export async function fetchPublicProfile(handle: string): Promise<PublicProfile 
       bio: row.bio,
       avatarEmoji: row.avatar_emoji || '🌱',
       avatarColor: asAvatarColor(row.avatar_color),
+      avatarUrl: row.avatar_url || null,
       memberSince: row.member_since,
       completedTotal: row.completed_total,
       focusSecondsTotal: row.focus_seconds_total,
@@ -218,5 +228,52 @@ export async function fetchPublicProfile(handle: string): Promise<PublicProfile 
   } catch (cause) {
     console.error('Failed to load profile:', messageOf(cause));
     return null;
+  }
+}
+
+// ── Avatar photos ──
+// Stored at avatars/<user_id>/<random>.<ext> in the public `avatars` bucket
+// (see supabase/migrations/004_avatars_and_group_privacy.sql). The path
+// starting with the uploader's own id is what the storage policy checks, so
+// nobody can write into another account's folder.
+
+export const AVATAR_MAX_BYTES = 4 * 1024 * 1024; // 4 MB
+const AVATAR_ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+
+/** Returns a human-readable problem, or null when the file is usable. */
+export function describeAvatarFileProblem(file: File): string | null {
+  if (!AVATAR_ALLOWED_TYPES.includes(file.type)) {
+    return 'Please choose a JPG, PNG, WEBP, or GIF image.';
+  }
+  if (file.size > AVATAR_MAX_BYTES) {
+    return `That image is too big — please choose one under ${AVATAR_MAX_BYTES / (1024 * 1024)}MB.`;
+  }
+  return null;
+}
+
+export async function uploadAvatar(
+  userId: string,
+  file: File,
+): Promise<{ url: string | null; error: string | null }> {
+  const problem = describeAvatarFileProblem(file);
+  if (problem) return { url: null, error: problem };
+
+  const extension = file.name.includes('.') ? file.name.split('.').pop() : 'jpg';
+  // A random name (not the task/profile id) means an old cached copy of a
+  // previous photo, still open in someone else's tab, is never overwritten
+  // out from under them — it just stops being linked from the profile.
+  const path = `${userId}/${crypto.randomUUID()}.${extension}`;
+
+  try {
+    const { error: uploadError } = await supabase.storage
+      .from('avatars')
+      .upload(path, file, { upsert: false, cacheControl: '31536000' });
+
+    if (uploadError) return { url: null, error: uploadError.message };
+
+    const { data } = supabase.storage.from('avatars').getPublicUrl(path);
+    return { url: data.publicUrl, error: null };
+  } catch (cause) {
+    return { url: null, error: messageOf(cause) };
   }
 }

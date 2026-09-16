@@ -8,6 +8,8 @@ export interface ProfileCardData {
   bio: string | null;
   avatarEmoji: string;
   avatarColor: AvatarColor;
+  /** An uploaded photo. When set, it's shown instead of the emoji. */
+  avatarUrl: string | null;
   memberSince: string | null;
   /** Null means the owner keeps this number to themselves. */
   completedTotal: number | null;
@@ -50,7 +52,11 @@ export default function ProfileCard({ profile }: { profile: ProfileCardData }) {
 
       <div className="profile-card-identity">
         <span className="profile-avatar" aria-hidden="true">
-          {profile.avatarEmoji}
+          {profile.avatarUrl ? (
+            <img src={profile.avatarUrl} alt="" loading="lazy" />
+          ) : (
+            profile.avatarEmoji
+          )}
         </span>
         <h2 className="profile-card-name">{profile.displayName?.trim() || `@${profile.username}`}</h2>
         <p className="profile-card-handle">@{profile.username}</p>

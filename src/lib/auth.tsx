@@ -9,6 +9,8 @@ interface AuthContextValue {
   loading: boolean;
   signUp: (email: string, password: string) => Promise<{ error: string | null }>;
   signIn: (email: string, password: string) => Promise<{ error: string | null }>;
+  /** Redirects the browser to Google, then back to /app already signed in. */
+  signInWithGoogle: () => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
   updateProfile: (data: { fullName?: string }) => Promise<{ error: string | null }>;
   resetPasswordForEmail: (email: string) => Promise<{ error: string | null }>;
@@ -45,6 +47,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { error: error?.message ?? null };
   }
 
+  async function signInWithGoogle() {
+    // This kicks off a redirect — the browser leaves the page, so there's
+    // nothing useful to return on success. `onAuthStateChange` above picks up
+    // the session once Google sends the browser back to `redirectTo`.
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo: `${window.location.origin}/app` },
+    });
+    return { error: error?.message ?? null };
+  }
+
   async function signOut() {
     await supabase.auth.signOut();
   }
@@ -74,6 +87,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         loading,
         signUp,
         signIn,
+        signInWithGoogle,
         signOut,
         updateProfile,
         resetPasswordForEmail,

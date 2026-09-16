@@ -11,13 +11,21 @@ export interface BackendState {
     bio: string | null;
     avatar_emoji: string;
     avatar_color: string;
+    avatar_url: string | null;
     is_public: boolean;
     show_streak: boolean;
     show_focus_time: boolean;
     show_completed: boolean;
   }[];
-  circles: { id: string; name: string; owner_id: string; invite_code: string }[];
+  circles: {
+    id: string;
+    name: string;
+    owner_id: string;
+    invite_code: string;
+    require_approval: boolean;
+  }[];
   circle_members: { circle_id: string; user_id: string; role: string }[];
+  circle_join_requests: { circle_id: string; user_id: string; requested_at: string }[];
   tasks: {
     id: string;
     user_id: string;
@@ -95,4 +103,44 @@ export async function addPersonalTask(page: Page, text: string) {
   await page.getByPlaceholder('What do you want to accomplish?').fill(text);
   await page.getByRole('button', { name: 'Add', exact: true }).click();
   await expect(page.getByText(text, { exact: true })).toBeVisible();
+}
+
+/** A real, tiny PNG on disk — used to prove an avatar upload round-trips real bytes. */
+export const AVATAR_FIXTURE = new URL('./fixtures/avatar.png', import.meta.url).pathname;
+export const AVATAR_FIXTURE_2 = new URL('./fixtures/avatar-2.png', import.meta.url).pathname;
+
+/**
+ * Clicks "Continue with Google" (or "Sign up with Google") and follows the
+ * redirect through e2e/fake-supabase.mjs's `/authorize` stand-in, which
+ * mints a session the same way a real IdP redirect eventually does. This
+ * proves the app's OAuth *plumbing* — the redirect out, parsing the session
+ * back from the URL, landing signed in — not Google's own consent screen,
+ * which nothing outside Google can exercise.
+ *
+ * `loginHint` reuses the same fake Google identity across calls, so a test
+ * can simulate the same person signing in with Google twice. It's injected
+ * by rewriting the outgoing request here, in the test, rather than by
+ * teaching the production button to send a test-only query parameter.
+ */
+export async function signInWithGoogle(
+  page: Page,
+  { buttonLabel = 'Continue with Google', loginHint }: { buttonLabel?: string; loginHint?: string } = {},
+) {
+  if (loginHint) {
+    await page.route('**/auth/v1/authorize**', (route) => {
+      const url = new URL(route.request().url());
+      url.searchParams.set('login_hint', loginHint);
+      return route.continue({ url: url.toString() });
+    });
+  }
+  await page.getByRole('button', { name: buttonLabel }).click();
+  // This is a real cross-document redirect, not an in-app route change, so
+  // the URL lands as `/app#access_token=...` and then loses the hash via
+  // `history.replaceState` once auth-js parses the session out of it — a
+  // same-document change with no `load` event. Matching on `**/app` with the
+  // default `waitUntil: 'load'` misses both: the first URL doesn't end in
+  // exactly `/app`, and the second never fires `load`. Checking the path
+  // alone sidesteps both.
+  await page.waitForURL((url) => url.pathname.endsWith('/app'));
+  await dismissOnboarding(page);
 }

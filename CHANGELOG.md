@@ -4,6 +4,36 @@ All notable changes to the FocusFlow productivity platform.
 
 ---
 
+## [Unreleased] — Google sign-in, real photos, and private groups
+
+### 🔑 Sign in with Google
+- A "Continue with Google" / "Sign up with Google" button on both auth pages
+- A new Google account is seeded automatically with the name and photo Google provides — nothing to fill in by hand
+- Signing in with Google a second time returns to the same account, never a duplicate
+
+### 🖼️ A real photo, not just an emoji
+- Upload a JPG, PNG, WEBP, or GIF (up to 4MB) as your profile photo — it replaces the emoji everywhere your card appears: your own preview, your shared link, and every circle's streak board
+- Swap it or drop back to an emoji any time; invalid files and oversized files are rejected before anything is sent
+
+### 🔒 A circle can be open, or ask-to-join
+- New setting when creating a circle: anyone with the code joins instantly (unchanged default), or every request needs the owner's yes first
+- The owner gets an inbox — see who's asking, let them in or decline, no explanation required
+- Declining isn't a ban: a declined person can ask again
+- A private circle carries a lock badge so members always know which kind they're in
+
+### 🎉 A small "that counted" moment
+- Finishing a shared task in a circle now gets a brief, friendly toast — never shown for un-checking something back open
+
+### 🧪 Tests
+- 10 more Playwright tests: Google sign-up and repeat sign-in, real photo upload/replace/remove/reject, and the full ask-to-join lifecycle (request → owner's inbox → accept/decline → re-request)
+- `supabase/tests` now also proves the ask-to-join flow, the owner-only inbox, and an uploaded photo flowing through the streak board — on real Postgres 16, not a mock
+- A fake Google OAuth endpoint and a fake Supabase Storage API (including real multipart/form-data parsing — `supabase-js` uploads a `File` as multipart, not raw bytes) let the suite drive both features in a real browser without a real Google account
+
+### 🐛 Fixed
+- A shared profile's uploaded photo never reached the public `/u/<username>` page — `PublicProfile.tsx` built the card without passing `avatarUrl` through, and because the field was typed optional, the type checker had nothing to say about it. It's required now, so a future omission fails the build instead of shipping a silently broken photo.
+
+---
+
 ## [Unreleased] — Profiles you can share
 
 ### 🪪 A profile of your own

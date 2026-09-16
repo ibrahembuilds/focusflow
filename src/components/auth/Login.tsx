@@ -4,6 +4,7 @@ import { Navigate, Link, useLocation, useNavigate } from 'react-router-dom';
 import { LogIn, Mail, Lock, AlertCircle } from 'lucide-react';
 import { useAuth } from '../../lib/auth';
 import AuthLayout from './AuthLayout';
+import GoogleSignInButton from './GoogleSignInButton';
 import Seo from '../Seo';
 
 export default function Login() {
@@ -92,6 +93,8 @@ export default function Login() {
           {submitting ? 'Logging in…' : 'Log in'}
         </button>
       </form>
+
+      <GoogleSignInButton label="Continue with Google" />
 
       <p className="auth-switch">
         New to FocusFlow? <Link to="/signup">Create an account</Link>

@@ -13,6 +13,8 @@ declare
   visible integer;
   activity record;
   profile_row record;
+  private_circle circles;
+  join_result record;
 begin
   -- Two accounts sign up; the trigger must hand each one a handle.
   insert into auth.users (email, raw_user_meta_data)
@@ -188,6 +190,7 @@ begin
     values (bob, 'read one chapter', current_date, true);
   update profiles
     set bio = 'Chemistry, mostly.', avatar_emoji = '🔥', avatar_color = 'ocean',
+        avatar_url = 'https://cdn.example.test/avatars/bob.jpg',
         display_name = 'Bob', tz_offset_minutes = 0
     where id = bob;
   execute 'reset role';
@@ -197,10 +200,19 @@ begin
   select * into profile_row from public_profile('BOB');  -- handles are case-insensitive
   assert profile_row.username = 'bob', 'a shared profile opens for a signed-out visitor';
   assert profile_row.bio = 'Chemistry, mostly.', 'the bio is shared';
-  assert profile_row.avatar_emoji = '🔥', 'the avatar is shared';
+  assert profile_row.avatar_emoji = '🔥', 'the emoji avatar is shared';
+  assert profile_row.avatar_url = 'https://cdn.example.test/avatars/bob.jpg',
+    'an uploaded avatar photo is shared too';
   assert profile_row.completed_total = 1,
     format('bob finished one task, card says %s', profile_row.completed_total);
   assert profile_row.active_dates = array[current_date], 'the streak dates are shared';
+  execute 'reset role';
+
+  perform set_config('request.jwt.claim.sub', alice::text, false);
+  execute 'set role authenticated';
+  select * into activity from circle_activity(circle_row.id, current_date) a where a.user_id = bob;
+  assert activity.avatar_url = 'https://cdn.example.test/avatars/bob.jpg',
+    'the streak board shows the same uploaded photo, not just the emoji fallback';
   execute 'reset role';
 
   -- Switching a number off removes it, and only it.
@@ -225,6 +237,99 @@ begin
   exception
     when insufficient_privilege then null;  -- also fine
   end;
+  execute 'reset role';
+
+  -- ── A circle can be open, or ask-to-join ──
+  perform set_config('request.jwt.claim.sub', alice::text, false);
+  execute 'set role authenticated';
+  private_circle := create_circle('Founders only', '🔒');
+  update circles set require_approval = true where id = private_circle.id;
+  execute 'reset role';
+
+  -- Requesting does not make you a member — only a pending row exists.
+  perform set_config('request.jwt.claim.sub', bob::text, false);
+  execute 'set role authenticated';
+  select * into join_result from join_circle_by_code(private_circle.invite_code);
+  assert join_result.status = 'pending',
+    format('a request-only circle should answer pending, got %s', join_result.status);
+  assert not is_circle_member(private_circle.id), 'a pending request is not membership';
+
+  -- Asking again while already pending is a no-op, not a second row or an error.
+  select * into join_result from join_circle_by_code(private_circle.invite_code);
+  assert join_result.status = 'pending', 'asking twice while pending stays pending';
+  execute 'reset role';
+
+  perform set_config('request.jwt.claim.sub', carol::text, false);
+  execute 'set role authenticated';
+  select * into join_result from join_circle_by_code(private_circle.invite_code);
+  assert join_result.status = 'pending', 'carol also only requests, and does not join';
+  execute 'reset role';
+
+  assert (select count(*) from circle_join_requests where circle_id = private_circle.id) = 2,
+    format('two people asked, expected 2 pending requests, saw %s',
+      (select count(*) from circle_join_requests where circle_id = private_circle.id));
+
+  -- Only the owner can see or act on the inbox.
+  perform set_config('request.jwt.claim.sub', bob::text, false);
+  execute 'set role authenticated';
+  begin
+    perform list_join_requests(private_circle.id);
+    raise exception 'a non-owner must not read the join-request inbox';
+  exception
+    when insufficient_privilege then null;  -- expected
+  end;
+  begin
+    perform respond_to_join_request(private_circle.id, carol, true);
+    raise exception 'a non-owner must not be able to approve someone else''s request';
+  exception
+    when insufficient_privilege then null;  -- expected
+  end;
+  execute 'reset role';
+
+  perform set_config('request.jwt.claim.sub', alice::text, false);
+  execute 'set role authenticated';
+  select count(*) into visible from list_join_requests(private_circle.id);
+  assert visible = 2, format('the owner should see 2 pending requests, saw %s', visible);
+
+  -- Accept bob, decline carol.
+  perform respond_to_join_request(private_circle.id, bob, true);
+  perform respond_to_join_request(private_circle.id, carol, false);
+  execute 'reset role';
+
+  assert (select count(*) from circle_join_requests where circle_id = private_circle.id) = 0,
+    'both requests are cleared from the inbox once answered';
+
+  perform set_config('request.jwt.claim.sub', bob::text, false);
+  execute 'set role authenticated';
+  assert is_circle_member(private_circle.id), 'accepting a request must add the member';
+  execute 'reset role';
+
+  perform set_config('request.jwt.claim.sub', carol::text, false);
+  execute 'set role authenticated';
+  assert not is_circle_member(private_circle.id), 'a declined request must not become membership';
+
+  -- Declining is not a ban: carol can ask again.
+  select * into join_result from join_circle_by_code(private_circle.invite_code);
+  assert join_result.status = 'pending', 'a declined person can send a new request';
+  execute 'reset role';
+
+  -- Re-using the code once you are already a member is a no-op that says so.
+  perform set_config('request.jwt.claim.sub', bob::text, false);
+  execute 'set role authenticated';
+  select * into join_result from join_circle_by_code(private_circle.invite_code);
+  assert join_result.status = 'already_member',
+    format('an existing member re-using the code should hear already_member, got %s',
+      join_result.status);
+  execute 'reset role';
+
+  -- The original circle from earlier in this test never opted into approval,
+  -- so the code still joins instantly — the default behaviour is unchanged.
+  perform set_config('request.jwt.claim.sub', carol::text, false);
+  execute 'set role authenticated';
+  select * into join_result from join_circle_by_code(circle_row.invite_code);
+  assert join_result.status = 'joined',
+    format('an open circle should still join instantly, got %s', join_result.status);
+  assert is_circle_member(circle_row.id), 'and carol is now actually a member';
   execute 'reset role';
 
   raise notice 'ALL SQL BEHAVIOUR CHECKS PASSED';

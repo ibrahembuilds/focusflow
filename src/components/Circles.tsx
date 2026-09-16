@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Users, Plus, LogIn, Loader2, AlertTriangle, AtSign } from 'lucide-react';
+import { Users, Plus, LogIn, Loader2, AlertTriangle, AtSign, Lock, Clock3 } from 'lucide-react';
 import { useAuth } from '../lib/auth';
 import { fetchProfile } from '../lib/profile';
 import type { Profile } from '../lib/profile';
@@ -18,12 +18,14 @@ export default function Circles() {
 
   const [name, setName] = useState('');
   const [emoji, setEmoji] = useState<string>(EMOJI_CHOICES[0]);
+  const [requireApproval, setRequireApproval] = useState(false);
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
 
   const [code, setCode] = useState('');
   const [joining, setJoining] = useState(false);
   const [joinError, setJoinError] = useState<string | null>(null);
+  const [joinNotice, setJoinNotice] = useState<string | null>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -53,7 +55,7 @@ export default function Circles() {
 
     setCreating(true);
     setCreateError(null);
-    const { data, error } = await createCircle(trimmed, emoji);
+    const { data, error } = await createCircle(trimmed, emoji, requireApproval);
     setCreating(false);
 
     if (error || !data) {
@@ -62,6 +64,7 @@ export default function Circles() {
     }
     setCircles((current) => [...current, data]);
     setName('');
+    setRequireApproval(false);
   }
 
   async function handleJoin(event: React.FormEvent) {
@@ -70,6 +73,7 @@ export default function Circles() {
 
     setJoining(true);
     setJoinError(null);
+    setJoinNotice(null);
     const { data, error } = await joinCircleByCode(code);
     setJoining(false);
 
@@ -77,8 +81,18 @@ export default function Circles() {
       setJoinError(error ?? 'Could not join that circle.');
       return;
     }
+
+    if (data.status === 'pending') {
+      setJoinNotice(`Request sent — ${data.circle.name} needs the owner to let you in.`);
+      setCode('');
+      return;
+    }
+
     setCircles((current) =>
-      current.some((circle) => circle.id === data.id) ? current : [...current, data],
+      current.some((circle) => circle.id === data.circle.id) ? current : [...current, data.circle],
+    );
+    setJoinNotice(
+      data.status === 'already_member' ? `You're already in ${data.circle.name}.` : null,
     );
     setCode('');
   }
@@ -111,7 +125,7 @@ export default function Circles() {
         <form className="card circle-form" onSubmit={handleCreate}>
           <h2 className="settings-title">Start a circle</h2>
           <p className="settings-description">
-            You get an invite code to share. Anyone with the code can join.
+            You get an invite code to share.
           </p>
           <label className="field-label" htmlFor="circle-name">
             Circle name
@@ -138,6 +152,23 @@ export default function Circles() {
               </button>
             ))}
           </div>
+          <label className="privacy-toggle">
+            <input
+              type="checkbox"
+              checked={requireApproval}
+              onChange={(event) => setRequireApproval(event.target.checked)}
+            />
+            <span>
+              <strong>
+                <Lock size={13} aria-hidden="true" /> Ask-to-join
+              </strong>
+              <small>
+                {requireApproval
+                  ? "You'll approve each person before they see anything."
+                  : 'Off: anyone with the code joins right away.'}
+              </small>
+            </span>
+          </label>
           {createError && (
             <p className="form-error" role="alert">
               <AlertTriangle size={14} aria-hidden="true" />
@@ -169,6 +200,12 @@ export default function Circles() {
             <p className="form-error" role="alert">
               <AlertTriangle size={14} aria-hidden="true" />
               {joinError}
+            </p>
+          )}
+          {joinNotice && (
+            <p className="form-notice" role="status">
+              <Clock3 size={14} aria-hidden="true" />
+              {joinNotice}
             </p>
           )}
           <button className="btn btn-primary" type="submit" disabled={joining || !code.trim()}>
@@ -203,7 +240,12 @@ export default function Circles() {
                 {circle.emoji}
               </span>
               <span className="circle-card-body">
-                <strong>{circle.name}</strong>
+                <strong>
+                  {circle.name}
+                  {circle.requireApproval && (
+                    <Lock size={12} aria-label="Ask-to-join" className="circle-card-lock" />
+                  )}
+                </strong>
                 <small>
                   Code {circle.inviteCode}
                   {circle.ownerId === user?.id ? ' · you started this' : ''}

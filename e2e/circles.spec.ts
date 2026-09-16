@@ -60,6 +60,11 @@ test.describe('circles: shared lists and shared streaks', () => {
     // Bob ticks it off; the database credits Bob, not Alice.
     await bob.page.locator('.task-item', { hasText: 'Book the lab slot' }).locator('.task-check').click();
 
+    // Finishing something shared gets a small, immediate "that counted"
+    // moment — never shown for un-checking a task back open.
+    await expect(bob.page.locator('.celebration-toast')).toBeVisible();
+    await expect(bob.page.locator('.celebration-toast')).toBeHidden({ timeout: 5000 });
+
     await expect
       .poll(async () => {
         const state = await backendState(request);

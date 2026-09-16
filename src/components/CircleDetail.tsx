@@ -6,12 +6,15 @@ import {
   Check,
   Copy,
   Flame,
+  Inbox,
   ListTodo,
   LogOut,
+  PartyPopper,
   Plus,
   RefreshCw,
   Trash2,
   Users,
+  X,
 } from 'lucide-react';
 import { useAuth } from '../lib/auth';
 import {
@@ -22,9 +25,11 @@ import {
   fetchCircleActivity,
   fetchCircleTasks,
   leaveCircle,
+  listJoinRequests,
+  respondToJoinRequest,
   setCircleTaskCompleted,
 } from '../lib/circles';
-import type { Circle, CircleTask, MemberActivity } from '../lib/circles';
+import type { Circle, CircleTask, JoinRequest, MemberActivity } from '../lib/circles';
 import { formatTime, streakFromDates, toLocalDateString } from '../store';
 import type { Task } from '../store';
 
@@ -46,6 +51,18 @@ function memberLabel(member: MemberActivity) {
   return member.displayName?.trim() || (member.username ? `@${member.username}` : 'Member');
 }
 
+const CELEBRATIONS = [
+  'Nice one!',
+  'That\'s one for the board.',
+  'Look at you go.',
+  'Circle sees it — well done.',
+  'Small win, real win.',
+];
+
+function randomCelebration() {
+  return CELEBRATIONS[Math.floor(Math.random() * CELEBRATIONS.length)];
+}
+
 export default function CircleDetail() {
   const { circleId = '' } = useParams();
   const { user } = useAuth();
@@ -64,8 +81,13 @@ export default function CircleDetail() {
   const [adding, setAdding] = useState(false);
   const [confirmingExit, setConfirmingExit] = useState(false);
 
+  const [joinRequests, setJoinRequests] = useState<JoinRequest[]>([]);
+  const [respondingTo, setRespondingTo] = useState<string | null>(null);
+  const [celebration, setCelebration] = useState<string | null>(null);
+
   const days = useMemo(lastSevenDays, []);
   const isOwner = circle?.ownerId === user?.id;
+  const isAskToJoin = circle?.requireApproval ?? false;
 
   const load = useCallback(
     async (mode: 'initial' | 'refresh') => {
@@ -101,6 +123,27 @@ export default function CircleDetail() {
     return () => window.clearInterval(timer);
   }, [load]);
 
+  const refreshRequests = useCallback(async () => {
+    if (!isOwner || !isAskToJoin) {
+      setJoinRequests([]);
+      return;
+    }
+    const { data } = await listJoinRequests(circleId);
+    if (data) setJoinRequests(data);
+  }, [circleId, isOwner, isAskToJoin]);
+
+  useEffect(() => {
+    void refreshRequests();
+  }, [refreshRequests]);
+
+  // The celebration is a brief, local flourish — it doesn't need a server
+  // round trip, so it clears itself on a plain timer rather than more state.
+  useEffect(() => {
+    if (!celebration) return;
+    const timer = window.setTimeout(() => setCelebration(null), 3200);
+    return () => window.clearTimeout(timer);
+  }, [celebration]);
+
   async function handleAdd(event: React.FormEvent) {
     event.preventDefault();
     const trimmed = text.trim();
@@ -126,6 +169,7 @@ export default function CircleDetail() {
   }
 
   async function handleToggle(task: CircleTask) {
+    const completing = !task.completed;
     // Show the tick immediately, then reconcile with whatever the server saved.
     setTasks((current) =>
       current.map((item) => (item.id === task.id ? { ...item, completed: !item.completed } : item)),
@@ -140,7 +184,24 @@ export default function CircleDetail() {
       return;
     }
     setTasks((current) => current.map((item) => (item.id === data.id ? data : item)));
+    // A little "yes, that counted" moment — only for finishing something,
+    // never for un-checking it back open.
+    if (completing) setCelebration(randomCelebration());
     void load('refresh');
+  }
+
+  async function handleRespond(request: JoinRequest, accept: boolean) {
+    if (!circle) return;
+    setRespondingTo(request.userId);
+    const { error: respondError } = await respondToJoinRequest(circle.id, request.userId, accept);
+    setRespondingTo(null);
+
+    if (respondError) {
+      setError(respondError);
+      return;
+    }
+    setJoinRequests((current) => current.filter((item) => item.userId !== request.userId));
+    if (accept) void load('refresh');
   }
 
   async function handleDeleteTask(task: CircleTask) {
@@ -206,6 +267,13 @@ export default function CircleDetail() {
 
   return (
     <div className="animate-in">
+      {celebration && (
+        <div className="celebration-toast" role="status">
+          <PartyPopper size={16} aria-hidden="true" />
+          {celebration}
+        </div>
+      )}
+
       <Link to="/app/circles" className="back-link">
         <ArrowLeft size={15} aria-hidden="true" />
         All circles
@@ -217,7 +285,10 @@ export default function CircleDetail() {
             {circle.emoji}
           </span>
           <div>
-            <h1 className="page-title">{circle.name}</h1>
+            <h1 className="page-title">
+              {circle.name}
+              {isAskToJoin && <span className="circle-privacy-badge">Ask-to-join</span>}
+            </h1>
             <p className="page-subtitle">
               {activity.length} {activity.length === 1 ? 'member' : 'members'} · {open.length} open ·{' '}
               {done.length} done
@@ -248,6 +319,48 @@ export default function CircleDetail() {
         </p>
       )}
 
+      {isOwner && joinRequests.length > 0 && (
+        <section className="card join-requests" aria-labelledby="join-requests-title">
+          <h2 className="settings-title" id="join-requests-title">
+            <Inbox size={16} aria-hidden="true" /> Waiting to join ({joinRequests.length})
+          </h2>
+          <p className="settings-description">
+            Nobody sees this circle until you say yes.
+          </p>
+          <div className="join-request-list">
+            {joinRequests.map((request) => (
+              <div key={request.userId} className="join-request-row">
+                <span className={`streak-avatar avatar-${request.avatarColor}`} aria-hidden="true">
+                  {request.avatarUrl ? <img src={request.avatarUrl} alt="" /> : request.avatarEmoji}
+                </span>
+                <span className="join-request-identity">
+                  <strong>{request.displayName?.trim() || `@${request.username ?? 'someone'}`}</strong>
+                  {request.username && <small>@{request.username}</small>}
+                </span>
+                <span className="join-request-actions">
+                  <button
+                    type="button"
+                    className="btn btn-primary btn-sm"
+                    onClick={() => void handleRespond(request, true)}
+                    disabled={respondingTo === request.userId}
+                  >
+                    <Check size={14} /> Let them in
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-ghost btn-sm"
+                    onClick={() => void handleRespond(request, false)}
+                    disabled={respondingTo === request.userId}
+                  >
+                    <X size={14} /> Decline
+                  </button>
+                </span>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
       <section className="card" aria-labelledby="streak-board-title">
         <h2 className="settings-title" id="streak-board-title">
           Streaks together
@@ -262,7 +375,7 @@ export default function CircleDetail() {
             return (
               <div key={member.userId} className="streak-row">
                 <span className={`streak-avatar avatar-${member.avatarColor}`} aria-hidden="true">
-                  {member.avatarEmoji}
+                  {member.avatarUrl ? <img src={member.avatarUrl} alt="" /> : member.avatarEmoji}
                 </span>
                 <span className="streak-identity">
                   {member.username ? (

@@ -60,6 +60,7 @@ export default function PublicProfile() {
                 bio: profile.bio,
                 avatarEmoji: profile.avatarEmoji,
                 avatarColor: profile.avatarColor,
+                avatarUrl: profile.avatarUrl,
                 memberSince: profile.memberSince,
                 completedTotal: profile.completedTotal,
                 focusSecondsTotal: profile.focusSecondsTotal,

@@ -38,10 +38,11 @@ Combined with a built-in **Pomodoro focus timer**, **drag-and-drop task organiza
 | 📋 **Drag & Drop Tasks** | Reactive fluid UI with DND Kit for effortless prioritization |
 | 📊 **Analytics** | Recharts-powered dashboards — weekly sessions, priority breakdowns |
 | 📅 **Calendar** | Monthly calendar with task indicators and daily task view |
-| 👥 **Circles** | Shared task lists for a study group, friends, or a team — join with a 6-character invite code |
+| 👥 **Circles** | Shared task lists for a study group, friends, or a team — join with a 6-character invite code, or ask to join if the owner wants to approve people first |
 | 🔥 **Shared streaks** | See everyone in a circle's last 7 days, today's finished tasks, and focus time — without exposing anyone's task text |
 | 🏷️ **Usernames** | A unique public `@handle` per account, assigned at sign-up and renameable any time |
-| 🪪 **Shareable profiles** | A profile card at `/u/yourname` with a bio, emoji, and colour — and four switches deciding which numbers appear on it |
+| 🪪 **Shareable profiles** | A profile card at `/u/yourname` with a bio, a real uploaded photo (or an emoji), and four switches deciding which numbers appear on it |
+| 🔑 **Google sign-in** | Sign up or log in with Google — name and photo seeded automatically |
 | 🎨 **Premium UI** | Calm, glass-morphism design system with light/dark themes and 5 accent colors |
 
 ## 🚀 Quick Start
@@ -68,9 +69,10 @@ npm run build
 
 FocusFlow needs two services configured — see [`.env.example`](.env.example) for the full list:
 
-1. **Supabase** — create a project, then in the SQL editor run [`supabase/schema.sql`](supabase/schema.sql) then the migrations in [`supabase/migrations/`](supabase/migrations) in order — `002` adds usernames, circles, and shared streaks; `003` adds shareable profiles. Set `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`.
+1. **Supabase** — create a project, then in the SQL editor run [`supabase/schema.sql`](supabase/schema.sql) then the migrations in [`supabase/migrations/`](supabase/migrations) in order — `002` adds usernames, circles, and shared streaks; `003` adds shareable profiles; `004` adds real avatar photos and the ask-to-join circle setting. Set `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`.
    Every file is idempotent, so re-running them on an existing project is safe.
-2. **OpenAI** — used by the AI task breakdown feature. The app deploys to Netlify; set `OPENAI_API_KEY` (and optionally `OPENAI_MODEL`) as environment variables in Netlify's site settings — they're read server-side by the edge function at [`netlify/edge-functions/decompose.ts`](netlify/edge-functions/decompose.ts), never exposed to the browser.
+2. **Google sign-in** (optional) — in the Supabase dashboard under Authentication → Providers, enable Google and paste in a Client ID and Secret from a Google Cloud OAuth consent screen. Supabase's own guide covers the Google Cloud side step by step: <https://supabase.com/docs/guides/auth/social-login/auth-google>. Until this is turned on, the "Continue with Google" button will show Supabase's "provider is not enabled" error — everything else in the app works without it.
+3. **OpenAI** — used by the AI task breakdown feature. The app deploys to Netlify; set `OPENAI_API_KEY` (and optionally `OPENAI_MODEL`) as environment variables in Netlify's site settings — they're read server-side by the edge function at [`netlify/edge-functions/decompose.ts`](netlify/edge-functions/decompose.ts), never exposed to the browser.
 
 ## 🏗️ Architecture
 
@@ -94,11 +96,11 @@ src/
 │   ├── Settings.tsx           # Config + data management
 │   └── Seo.tsx                # Per-route meta tags
 ├── lib/
-│   ├── auth.tsx               # Supabase Auth context
+│   ├── auth.tsx               # Supabase Auth context, incl. Google OAuth
 │   ├── supabase.ts            # Supabase client
 │   ├── sync.ts                # Task/session sync with Supabase (offline-safe write queue)
-│   ├── profile.ts             # Usernames, profiles, and sharing rules
-│   ├── circles.ts             # Circles, shared tasks, shared streaks
+│   ├── profile.ts             # Usernames, profiles, avatar uploads, sharing rules
+│   ├── circles.ts             # Circles, shared tasks, shared streaks, join requests
 │   └── api.ts                 # AI decompose API client
 ├── store.ts                   # Zustand state management
 └── index.css                  # Full design system
@@ -118,10 +120,13 @@ npm run e2e:ui       # the same suite, interactively
 ```
 
 The suite starts two servers itself: `e2e/fake-supabase.mjs` (a stand-in for the
-Supabase auth and PostgREST APIs, backed by in-memory objects) and a preview of
-the production build pointed at it. Everything above the network boundary is the
-code that ships — routing, the store, the offline write queue, and the
-visibility rules.
+Supabase auth, PostgREST, Storage, and OAuth-redirect APIs, backed by in-memory
+objects) and a preview of the production build pointed at it. Everything above
+the network boundary is the code that ships — routing, the store, the offline
+write queue, and the visibility rules. The Google sign-in tests exercise the
+app's OAuth *plumbing* this way — the redirect, the session parsed back out of
+the URL, the account landing signed in — not Google's own consent screen,
+which nothing outside Google can test.
 
 The first run needs a browser: `npx playwright install chromium`. If your
 environment already ships one, point at it with `PLAYWRIGHT_CHROMIUM_PATH`

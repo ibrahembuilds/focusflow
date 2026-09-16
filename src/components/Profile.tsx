@@ -1,15 +1,17 @@
-import { useEffect, useState } from 'react';
-import { AlertTriangle, Check, Copy, Eye, EyeOff, Link2, Loader2 } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { AlertTriangle, Camera, Check, Copy, Eye, EyeOff, Link2, Loader2, X } from 'lucide-react';
 import { useAuth } from '../lib/auth';
 import {
   AVATAR_COLORS,
   AVATAR_EMOJI,
   BIO_MAX_LENGTH,
+  describeAvatarFileProblem,
   describeUsernameProblem,
   fetchProfile,
   normalizeUsername,
   profileUrl,
   saveProfile,
+  uploadAvatar,
 } from '../lib/profile';
 import type { AvatarColor, Profile as ProfileRecord } from '../lib/profile';
 import ProfileCard from './ProfileCard';
@@ -34,6 +36,8 @@ export default function Profile() {
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -50,6 +54,7 @@ export default function Profile() {
           bio: null,
           avatarEmoji: '🌱',
           avatarColor: 'forest',
+          avatarUrl: null,
           isPublic: true,
           showStreak: true,
           showFocusTime: true,
@@ -92,6 +97,7 @@ export default function Profile() {
         bio: draft.bio,
         avatarEmoji: draft.avatarEmoji,
         avatarColor: draft.avatarColor,
+        avatarUrl: draft.avatarUrl,
         isPublic: draft.isPublic,
         showStreak: draft.showStreak,
         showFocusTime: draft.showFocusTime,
@@ -117,6 +123,36 @@ export default function Profile() {
     } catch {
       setError('Copying is blocked in this browser — the link is shown above.');
     }
+  }
+
+  async function handleAvatarSelected(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    // Clear the input so choosing the same file again still fires a change
+    // event — otherwise a failed upload can't be retried with the same photo.
+    event.target.value = '';
+    if (!file || !user) return;
+
+    const problem = describeAvatarFileProblem(file);
+    if (problem) {
+      setError(problem);
+      return;
+    }
+
+    setUploadingAvatar(true);
+    setError(null);
+    // The photo lands in storage right away — that part can't wait for Save,
+    // a file input only hands you the bytes once. The profile row itself
+    // still only changes when Save is pressed, same as every other field
+    // here, so a photo you pick and then navigate away from is simply
+    // unused, not half-applied to a card someone else can already see.
+    const { url, error: uploadError } = await uploadAvatar(user.id, file);
+    setUploadingAvatar(false);
+
+    if (uploadError || !url) {
+      setError(uploadError ?? 'Could not upload that photo.');
+      return;
+    }
+    patch({ avatarUrl: url });
   }
 
   if (!loaded || !draft) {
@@ -218,7 +254,49 @@ export default function Profile() {
             <h2 className="settings-title" id="profile-look">
               Your look
             </h2>
-            <p className="settings-description">Pick a face and a colour for your card.</p>
+            <p className="settings-description">
+              Add a photo, or pick an emoji and a colour instead — whichever feels like you.
+            </p>
+
+            <div className="avatar-upload-row">
+              <span className={`profile-avatar avatar-preview avatar-${draft.avatarColor}`}>
+                {draft.avatarUrl ? (
+                  <img src={draft.avatarUrl} alt="" />
+                ) : (
+                  <span aria-hidden="true">{draft.avatarEmoji}</span>
+                )}
+              </span>
+              <div className="avatar-upload-actions">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,image/gif"
+                  className="visually-hidden"
+                  onChange={(event) => void handleAvatarSelected(event)}
+                  aria-label="Upload a profile photo"
+                />
+                <button
+                  type="button"
+                  className="btn btn-ghost btn-sm"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploadingAvatar}
+                >
+                  {uploadingAvatar ? <Loader2 size={14} className="spin" /> : <Camera size={14} />}
+                  {uploadingAvatar ? 'Uploading…' : draft.avatarUrl ? 'Change photo' : 'Upload photo'}
+                </button>
+                {draft.avatarUrl && (
+                  <button
+                    type="button"
+                    className="btn btn-ghost btn-sm"
+                    onClick={() => patch({ avatarUrl: null })}
+                  >
+                    <X size={14} />
+                    Use emoji instead
+                  </button>
+                )}
+                <small className="field-hint">JPG, PNG, WEBP, or GIF, up to 4MB.</small>
+              </div>
+            </div>
 
             <div className="emoji-picker" role="group" aria-label="Profile emoji">
               {AVATAR_EMOJI.map((emoji) => (
@@ -344,6 +422,7 @@ export default function Profile() {
               bio: draft.bio,
               avatarEmoji: draft.avatarEmoji,
               avatarColor: draft.avatarColor,
+              avatarUrl: draft.avatarUrl,
               memberSince: draft.createdAt,
               completedTotal: draft.showCompleted
                 ? tasks.filter((task) => task.completed).length

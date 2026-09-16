@@ -4012,6 +4012,311 @@ a.sidebar-account-info:hover {
   }
 }
 
+/* ── Avatar photos: fill the circle, whichever component draws it ──────── */
+
+.profile-avatar,
+.streak-avatar,
+.avatar-preview {
+  overflow: hidden;
+}
+
+.profile-avatar img,
+.streak-avatar img,
+.avatar-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: inherit;
+}
+
+/* ── A hidden-but-accessible utility, for the real file input behind the
+   styled "Upload photo" button ─────────────────────────────────────────── */
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ── The avatar upload row in the profile editor ─────────────────────────── */
+
+.avatar-upload-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin: 0.85rem 0 1.1rem;
+}
+
+.avatar-preview {
+  display: grid;
+  place-items: center;
+  width: 3.5rem;
+  height: 3.5rem;
+  flex-shrink: 0;
+  border-radius: var(--radius-full);
+  background: var(--avatar-soft, var(--bg-soft));
+  font-size: 1.55rem;
+}
+
+.avatar-upload-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.avatar-upload-actions .field-hint {
+  flex-basis: 100%;
+  margin-top: 0.1rem;
+}
+
+/* ── "Sign in with Google" ───────────────────────────────────────────────── */
+
+.google-signin {
+  margin-top: 1.1rem;
+}
+
+.auth-divider {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin: 1.1rem 0;
+  color: var(--text-tertiary);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.auth-divider::before,
+.auth-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border-subtle);
+}
+
+.btn-google {
+  width: 100%;
+  justify-content: center;
+  gap: 0.6rem;
+  border: 1px solid var(--border-default);
+  background: var(--bg-surface-raised);
+  color: var(--text-primary);
+}
+
+.btn-google:hover:not(:disabled) {
+  background: var(--bg-surface-hover);
+  border-color: var(--border-strong);
+}
+
+/* ── A circle's privacy: the toggle on creation, and the badge afterwards ── */
+
+.privacy-toggle {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  margin: 0.15rem 0 0.85rem;
+  padding: 0.6rem 0.7rem;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface);
+  cursor: pointer;
+  transition: border-color var(--transition-fast);
+}
+
+.privacy-toggle:has(input:checked) {
+  border-color: var(--color-primary);
+}
+
+.privacy-toggle input {
+  width: 1.05rem;
+  height: 1.05rem;
+  margin-top: 0.15rem;
+  flex-shrink: 0;
+  accent-color: var(--color-primary);
+}
+
+.privacy-toggle span {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.privacy-toggle strong {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.84rem;
+  font-weight: 600;
+}
+
+.privacy-toggle small {
+  color: var(--text-tertiary);
+  font-size: 0.74rem;
+  line-height: 1.4;
+}
+
+.circle-card-lock {
+  margin-left: 0.35rem;
+  color: var(--text-tertiary);
+  vertical-align: -1px;
+}
+
+.circle-privacy-badge {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 0.6rem;
+  padding: 0.15rem 0.55rem;
+  border-radius: var(--radius-full);
+  background: var(--bg-soft);
+  color: var(--text-tertiary);
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  vertical-align: middle;
+}
+
+.form-notice {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin: 0.65rem 0 0;
+  padding: 0.55rem 0.75rem;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  background: var(--bg-soft);
+  color: var(--text-secondary);
+  font-size: 0.82rem;
+}
+
+/* ── The owner's join-request inbox ──────────────────────────────────────── */
+
+.join-requests .settings-title {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.join-request-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.join-request-row {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.55rem 0.7rem;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface-raised);
+  flex-wrap: wrap;
+}
+
+.join-request-identity {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+
+.join-request-identity strong {
+  font-size: 0.86rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.join-request-identity small {
+  color: var(--text-tertiary);
+  font-size: 0.74rem;
+}
+
+.join-request-actions {
+  display: flex;
+  gap: 0.4rem;
+  flex-shrink: 0;
+}
+
+/* ── A small "that counted" moment when you finish a shared task ────────── */
+
+.celebration-toast {
+  position: fixed;
+  top: 1.25rem;
+  left: 50%;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 1.1rem;
+  border-radius: var(--radius-full);
+  background: var(--color-primary);
+  color: var(--text-inverse);
+  font-size: 0.85rem;
+  font-weight: 600;
+  box-shadow: var(--shadow-lg);
+  transform: translateX(-50%);
+  animation: celebration-pop 3.2s ease forwards;
+  pointer-events: none;
+}
+
+@keyframes celebration-pop {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -8px);
+  }
+  10%,
+  80% {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -6px);
+  }
+}
+
+@media (max-width: 640px) {
+  .celebration-toast {
+    left: 1rem;
+    right: 1rem;
+    top: 0.85rem;
+    transform: none;
+    justify-content: center;
+  }
+
+  @keyframes celebration-pop {
+    0% {
+      opacity: 0;
+      transform: translateY(-8px);
+    }
+    10%,
+    80% {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    100% {
+      opacity: 0;
+      transform: translateY(-6px);
+    }
+  }
+
+  .join-request-actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

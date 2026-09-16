@@ -4,6 +4,7 @@ import { Navigate, Link } from 'react-router-dom';
 import { UserPlus, Mail, Lock, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { useAuth } from '../../lib/auth';
 import AuthLayout from './AuthLayout';
+import GoogleSignInButton from './GoogleSignInButton';
 import Seo from '../Seo';
 
 export default function Signup() {
@@ -117,6 +118,8 @@ export default function Signup() {
           {submitting ? 'Creating account…' : 'Create account'}
         </button>
       </form>
+
+      <GoogleSignInButton label="Sign up with Google" />
 
       <p className="auth-switch">
         Already have an account? <Link to="/login">Log in</Link>
