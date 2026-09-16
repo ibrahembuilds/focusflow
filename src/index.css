@@ -3263,6 +3263,341 @@ h3 {
   }
 }
 
+/* ── Circles: shared lists and streak boards ─────────────────── */
+
+.spin {
+  animation: spin 1s linear infinite;
+}
+
+.form-error {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin: 0.65rem 0 0;
+  padding: 0.55rem 0.75rem;
+  border: 1px solid var(--color-danger);
+  border-radius: var(--radius-md);
+  background: rgb(194 71 71 / 0.08);
+  color: var(--color-danger);
+  font-size: 0.82rem;
+}
+
+.form-error svg {
+  flex-shrink: 0;
+}
+
+.field-hint {
+  display: block;
+  margin-top: 0.3rem;
+  color: var(--text-tertiary);
+  font-size: 0.75rem;
+}
+
+.username-field {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.username-field > span {
+  color: var(--text-tertiary);
+  font-weight: 600;
+}
+
+.username-field .input {
+  flex: 1;
+}
+
+.handle-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin-bottom: 1.25rem;
+  padding: 0.4rem 0.8rem;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-full);
+  background: var(--bg-soft);
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+}
+
+.handle-chip-link {
+  color: var(--color-primary);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.handle-chip-link:hover {
+  text-decoration: underline;
+}
+
+.circle-forms {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(270px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.circle-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.circle-form .btn {
+  align-self: flex-start;
+  margin-top: 0.35rem;
+}
+
+.invite-code-input {
+  font-family: var(--font-mono);
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+}
+
+.emoji-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.emoji-choice {
+  width: 2.2rem;
+  height: 2.2rem;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface);
+  font-size: 1.05rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: border-color var(--transition-fast), background var(--transition-fast);
+}
+
+.emoji-choice:hover {
+  background: var(--bg-surface-hover);
+}
+
+.emoji-choice.active {
+  border-color: var(--color-primary);
+  box-shadow: var(--shadow-glow-primary);
+}
+
+.circle-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 0.85rem;
+}
+
+.circle-card {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  text-decoration: none;
+  color: inherit;
+  transition: border-color var(--transition-fast), transform var(--transition-fast);
+}
+
+.circle-card:hover {
+  border-color: var(--color-primary);
+  transform: translateY(-1px);
+}
+
+.circle-card-emoji {
+  display: grid;
+  place-items: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  flex-shrink: 0;
+  border-radius: var(--radius-md);
+  background: var(--bg-soft);
+  font-size: 1.25rem;
+}
+
+.circle-card-body {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.circle-card-body strong {
+  font-size: 0.95rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.circle-card-body small {
+  color: var(--text-tertiary);
+  font-size: 0.75rem;
+}
+
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-bottom: 0.75rem;
+  color: var(--text-tertiary);
+  font-size: 0.82rem;
+  text-decoration: none;
+}
+
+.back-link:hover {
+  color: var(--color-primary);
+}
+
+.circle-heading {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.circle-heading-emoji {
+  display: grid;
+  place-items: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  flex-shrink: 0;
+  border-radius: var(--radius-lg);
+  background: var(--bg-soft);
+  font-size: 1.4rem;
+}
+
+.circle-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.invite-code {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.45rem 0.8rem;
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius-md);
+  background: var(--bg-soft);
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  letter-spacing: 0.12em;
+  cursor: pointer;
+}
+
+.invite-code:hover {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+.streak-board {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 0.85rem;
+}
+
+.streak-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.6rem 0.7rem;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface-raised);
+}
+
+.streak-avatar {
+  display: grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  flex-shrink: 0;
+  border-radius: var(--radius-full);
+  background: var(--color-primary);
+  color: var(--text-inverse);
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.streak-identity {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+}
+
+.streak-identity strong {
+  font-size: 0.88rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.streak-identity small {
+  color: var(--text-tertiary);
+  font-size: 0.74rem;
+}
+
+.streak-days {
+  display: flex;
+  gap: 0.22rem;
+}
+
+.streak-dot {
+  display: grid;
+  place-items: center;
+  width: 1.45rem;
+  height: 1.45rem;
+  border-radius: var(--radius-sm);
+  background: var(--bg-soft);
+  color: var(--text-tertiary);
+  font-size: 0.62rem;
+  font-weight: 600;
+}
+
+.streak-dot.on {
+  background: var(--color-primary);
+  color: var(--text-inverse);
+}
+
+.streak-count {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  min-width: 2.6rem;
+  justify-content: flex-end;
+  color: var(--color-accent);
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.task-title {
+  display: block;
+}
+
+.task-byline {
+  display: block;
+  margin-top: 0.1rem;
+  color: var(--text-tertiary);
+  font-size: 0.7rem;
+  font-weight: 500;
+}
+
+.circle-danger {
+  margin-top: 2rem;
+}
+
+@media (max-width: 640px) {
+  .streak-row {
+    flex-wrap: wrap;
+  }
+
+  .streak-days {
+    order: 3;
+    width: 100%;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

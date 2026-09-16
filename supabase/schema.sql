@@ -1,5 +1,8 @@
 -- FocusFlow schema for Supabase
 -- Run this in the Supabase dashboard: SQL Editor > New query > paste > Run.
+--
+-- Run this file FIRST, then migrations/002_profiles_and_circles.sql, which adds
+-- usernames, shared circles, and the shared-streak function.
 -- Tables mirror the Task and TimerSession types in src/store.ts.
 -- Data is scoped per authenticated user via Supabase Auth (auth.uid()).
 

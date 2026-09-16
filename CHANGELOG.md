@@ -4,6 +4,29 @@ All notable changes to the FocusFlow productivity platform.
 
 ---
 
+## [Unreleased] — Circles, usernames & an end-to-end test suite
+
+### 👥 Circles — shared lists for students, friends, and coworkers
+- Create a circle, get a 6-character invite code, and anyone with the code can join
+- One shared task list per circle: everybody sees it, everybody can tick things off, and each task shows who added it and who finished it
+- A "Streaks together" board shows every member's last 7 days, today's completed tasks, focus sessions, and focus time — dates and counts only, never anyone's task text
+- Your private tasks stay private: row-level security only exposes a task to a circle when you deliberately add it there
+- Leaving a circle keeps your own tasks and streak; only the owner can delete the circle
+
+### 🏷️ Usernames
+- Every account now has a public `@handle`, created automatically at sign-up from the email and renameable in Settings
+- Handles are unique, validated in the browser and enforced by a database constraint
+
+### 🧪 End-to-end tests
+- A Playwright suite drives the production bundle in a real browser against a stand-in Supabase backend: sign-up, task saving, offline recovery, account isolation, circles, and profiles
+- SQL checks run the real schema on a throwaway Postgres and assert the row-level security policies, the completion trigger, and the shared-streak function
+
+### 🐛 Fixes
+- Tasks no longer disappear from the list when the page is reloaded without a connection — the app was treating "Supabase has not resolved the session yet" as a sign-out and clearing this browser's cached tasks
+- A task shared with a circle is no longer pulled into your personal Today list, where the next sync would have quietly made it private again
+
+---
+
 ## [Unreleased] — Durable task saving
 
 ### 💾 Tasks always reach your account

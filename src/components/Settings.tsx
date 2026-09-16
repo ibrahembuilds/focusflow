@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Trash2, Download, AlertTriangle, Sun, Moon, Palette, Check, CircleHelp } from 'lucide-react';
 import { useStore } from '../store';
 import { useAuth } from '../lib/auth';
+import { describeUsernameProblem, fetchProfile, normalizeUsername, saveProfile } from '../lib/profile';
 
 const COLOR_OPTIONS = [
   { id: 'forest', label: 'Forest' },
@@ -28,6 +29,9 @@ export default function Settings() {
   const { user, updateProfile } = useAuth();
   const [showReset, setShowReset] = useState(false);
   const [fullName, setFullName] = useState('');
+  const [username, setUsername] = useState('');
+  const [savedUsername, setSavedUsername] = useState('');
+  const [profileError, setProfileError] = useState<string | null>(null);
   const [savingProfile, setSavingProfile] = useState(false);
   const [profileSaved, setProfileSaved] = useState(false);
 
@@ -36,10 +40,44 @@ export default function Settings() {
     setFullName(typeof metadataName === 'string' ? metadataName : '');
   }, [user]);
 
+  useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+    void fetchProfile(user.id).then((profile) => {
+      if (cancelled || !profile) return;
+      setUsername(profile.username);
+      setSavedUsername(profile.username);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [user]);
+
   async function handleSaveProfile() {
+    if (!user) return;
+    const handle = normalizeUsername(username);
+    const problem = describeUsernameProblem(handle);
+    if (problem) {
+      setProfileError(problem);
+      return;
+    }
+
     setSavingProfile(true);
-    await updateProfile({ fullName: fullName.trim() });
+    setProfileError(null);
+    // The name lives on the auth user (it drives the greeting); the handle
+    // lives on the profile row, because other people have to be able to read it.
+    const [, profileResult] = await Promise.all([
+      updateProfile({ fullName: fullName.trim() }),
+      saveProfile(user.id, { username: handle, displayName: fullName }),
+    ]);
     setSavingProfile(false);
+
+    if (profileResult.error) {
+      setProfileError(profileResult.error);
+      return;
+    }
+    setUsername(handle);
+    setSavedUsername(handle);
     setProfileSaved(true);
     setTimeout(() => setProfileSaved(false), 2000);
   }
@@ -77,7 +115,10 @@ export default function Settings() {
       <div className="settings-stack">
         <section className="card" aria-labelledby="profile-title">
           <h2 className="settings-title" id="profile-title">Profile</h2>
-          <p className="settings-description">Your name shows up in the sidebar and your dashboard greeting.</p>
+          <p className="settings-description">
+            Your name shows up in the sidebar and your dashboard greeting. Your username is how
+            people in your circles recognise you.
+          </p>
           <div className="settings-fields">
             <div>
               <label className="field-label" htmlFor="profile-name">Name</label>
@@ -92,17 +133,48 @@ export default function Settings() {
               />
             </div>
             <div>
+              <label className="field-label" htmlFor="profile-username">Username</label>
+              <div className="username-field">
+                <span aria-hidden="true">@</span>
+                <input
+                  id="profile-username"
+                  className="input"
+                  type="text"
+                  maxLength={20}
+                  value={username}
+                  autoComplete="off"
+                  spellCheck={false}
+                  onChange={(event) => {
+                    setUsername(normalizeUsername(event.target.value));
+                    setProfileError(null);
+                  }}
+                  placeholder="yourname"
+                />
+              </div>
+              <small className="field-hint">
+                {username && username !== savedUsername
+                  ? (describeUsernameProblem(username) ?? 'Looks good — save to claim it.')
+                  : '3–20 characters: lowercase letters, numbers, underscores.'}
+              </small>
+            </div>
+            <div>
               <label className="field-label" htmlFor="profile-email">Email</label>
               <input id="profile-email" className="input" type="email" value={user?.email ?? ''} readOnly />
             </div>
           </div>
+          {profileError && (
+            <p className="form-error" role="alert">
+              <AlertTriangle size={14} aria-hidden="true" />
+              {profileError}
+            </p>
+          )}
           <div className="profile-actions">
             <button
               className="btn btn-primary btn-sm"
               onClick={handleSaveProfile}
               disabled={savingProfile}
             >
-              {savingProfile ? 'Saving…' : 'Save name'}
+              {savingProfile ? 'Saving…' : 'Save profile'}
             </button>
             {profileSaved && <span className="profile-saved-note">Saved</span>}
           </div>

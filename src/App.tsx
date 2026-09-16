@@ -20,6 +20,8 @@ const CalendarView = lazy(() => import('./components/CalendarView'));
 const Analytics = lazy(() => import('./components/Analytics'));
 const AIDecompose = lazy(() => import('./components/AIDecompose'));
 const Settings = lazy(() => import('./components/Settings'));
+const Circles = lazy(() => import('./components/Circles'));
+const CircleDetail = lazy(() => import('./components/CircleDetail'));
 
 function RouteFallback() {
   return (
@@ -48,6 +50,8 @@ function AppShell() {
             <Route path="tasks" element={<TaskList />} />
             <Route path="calendar" element={<CalendarView />} />
             <Route path="analytics" element={<Analytics />} />
+            <Route path="circles" element={<Circles />} />
+            <Route path="circles/:circleId" element={<CircleDetail />} />
             <Route path="ai-decompose" element={<AIDecompose />} />
             <Route path="settings" element={<Settings />} />
           </Routes>
@@ -58,15 +62,20 @@ function AppShell() {
 }
 
 function StoreAuthBridge() {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
   const hydrateForUser = useStore((state) => state.hydrateForUser);
 
   useEffect(() => {
+    // Wait for Supabase to actually resolve the stored session. On every page
+    // load it reports "no user" first; treating that as a sign-out would clear
+    // this browser's cached tasks before the real session arrives — and if the
+    // network is down, there is nothing to fetch them back with.
+    if (loading) return;
     // Depend on the id only — Supabase emits a fresh `user` object on token
     // refresh too, and re-fetching tasks/sessions on every refresh would be wasted work.
     void hydrateForUser(user ? { id: user.id, user_metadata: user.user_metadata } : null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.id, hydrateForUser]);
+  }, [loading, user?.id, hydrateForUser]);
 
   return null;
 }

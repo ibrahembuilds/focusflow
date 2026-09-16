@@ -16,7 +16,7 @@
 </p>
 
 <p align="center">
-  <a href="https://prmoda.netlify.app">Live demo</a>
+  <a href="https://focusflowai.site">Live app</a>
 </p>
 
 ---
@@ -38,6 +38,9 @@ Combined with a built-in **Pomodoro focus timer**, **drag-and-drop task organiza
 | 📋 **Drag & Drop Tasks** | Reactive fluid UI with DND Kit for effortless prioritization |
 | 📊 **Analytics** | Recharts-powered dashboards — weekly sessions, priority breakdowns |
 | 📅 **Calendar** | Monthly calendar with task indicators and daily task view |
+| 👥 **Circles** | Shared task lists for a study group, friends, or a team — join with a 6-character invite code |
+| 🔥 **Shared streaks** | See everyone in a circle's last 7 days, today's finished tasks, and focus time — without exposing anyone's task text |
+| 🏷️ **Usernames** | A unique public `@handle` per account, assigned at sign-up and renameable in Settings |
 | 🎨 **Premium UI** | Calm, glass-morphism design system with light/dark themes and 5 accent colors |
 
 ## 🚀 Quick Start
@@ -64,7 +67,8 @@ npm run build
 
 FocusFlow needs two services configured — see [`.env.example`](.env.example) for the full list:
 
-1. **Supabase** — create a project, run [`supabase/schema.sql`](supabase/schema.sql) in the SQL editor, then set `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`.
+1. **Supabase** — create a project, then in the SQL editor run [`supabase/schema.sql`](supabase/schema.sql) followed by [`supabase/migrations/002_profiles_and_circles.sql`](supabase/migrations/002_profiles_and_circles.sql) (usernames, circles, shared streaks). Set `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`.
+   Both files are idempotent, so re-running them on an existing project is safe.
 2. **OpenAI** — used by the AI task breakdown feature. The app deploys to Netlify; set `OPENAI_API_KEY` (and optionally `OPENAI_MODEL`) as environment variables in Netlify's site settings — they're read server-side by the edge function at [`netlify/edge-functions/decompose.ts`](netlify/edge-functions/decompose.ts), never exposed to the browser.
 
 ## 🏗️ Architecture
@@ -80,6 +84,8 @@ src/
 │   ├── Dashboard.tsx          # Stats + weekly charts
 │   ├── CalendarView.tsx       # Monthly calendar
 │   ├── Analytics.tsx          # Recharts charts
+│   ├── Circles.tsx            # Create/join shared circles
+│   ├── CircleDetail.tsx       # Shared list + streak board
 │   ├── Sidebar.tsx            # Navigation + account menu
 │   ├── Settings.tsx           # Config + data management
 │   └── Seo.tsx                # Per-route meta tags
@@ -87,10 +93,38 @@ src/
 │   ├── auth.tsx               # Supabase Auth context
 │   ├── supabase.ts            # Supabase client
 │   ├── sync.ts                # Task/session sync with Supabase (offline-safe write queue)
+│   ├── profile.ts             # Usernames and profiles
+│   ├── circles.ts             # Circles, shared tasks, shared streaks
 │   └── api.ts                 # AI decompose API client
 ├── store.ts                   # Zustand state management
 └── index.css                  # Full design system
+
+e2e/                           # Playwright suite + a stand-in Supabase backend
+supabase/
+├── schema.sql                 # Base tables and policies
+├── migrations/                # Incremental SQL to run on an existing project
+└── tests/                     # SQL checks for the policies and functions
 ```
+
+## 🧪 Tests
+
+```bash
+npm run e2e          # Playwright: builds the app and drives it in a real browser
+npm run e2e:ui       # the same suite, interactively
+```
+
+The suite starts two servers itself: `e2e/fake-supabase.mjs` (a stand-in for the
+Supabase auth and PostgREST APIs, backed by in-memory objects) and a preview of
+the production build pointed at it. Everything above the network boundary is the
+code that ships — routing, the store, the offline write queue, and the
+visibility rules.
+
+The first run needs a browser: `npx playwright install chromium`. If your
+environment already ships one, point at it with `PLAYWRIGHT_CHROMIUM_PATH`
+instead.
+
+The database rules themselves are checked separately — see
+[`supabase/tests/README.md`](supabase/tests/README.md).
 
 ## 📦 Tech Stack
 

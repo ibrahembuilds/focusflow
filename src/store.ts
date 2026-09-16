@@ -397,15 +397,20 @@ function getActivityDates(tasks: Task[], sessions: TimerSession[]) {
   return dates;
 }
 
-function toLocalDateString(date: Date) {
+export function toLocalDateString(date: Date) {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, '0');
   const day = String(date.getDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
 }
 
-export function getCurrentStreak(tasks: Task[], sessions: TimerSession[]) {
-  const activityDates = getActivityDates(tasks, sessions);
+/**
+ * Days in a row ending today (or yesterday, so a streak survives until the day
+ * is actually over). Shared by your own dashboard and a circle's streak board,
+ * so both count the same way.
+ */
+export function streakFromDates(dates: Iterable<string>) {
+  const activityDates = dates instanceof Set ? dates : new Set(dates);
   const cursor = new Date();
 
   if (!activityDates.has(toLocalDateString(cursor))) {
@@ -419,6 +424,10 @@ export function getCurrentStreak(tasks: Task[], sessions: TimerSession[]) {
   }
 
   return streak;
+}
+
+export function getCurrentStreak(tasks: Task[], sessions: TimerSession[]) {
+  return streakFromDates(getActivityDates(tasks, sessions));
 }
 
 export function getLongestStreak(tasks: Task[], sessions: TimerSession[]) {

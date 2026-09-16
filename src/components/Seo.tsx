@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 
-const SITE_URL = 'https://prmoda.netlify.app';
+const SITE_URL = 'https://focusflowai.site';
 const SITE_NAME = 'FocusFlow';
 const DEFAULT_IMAGE = `${SITE_URL}/brand/focusflow-logo.png`;
 

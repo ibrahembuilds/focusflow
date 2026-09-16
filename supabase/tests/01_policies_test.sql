@@ -1,0 +1,144 @@
+grant select, insert, update, delete on all tables in schema public to authenticated;
+grant execute on all functions in schema public to authenticated;
+
+do $$
+declare
+  alice uuid;
+  bob uuid;
+  carol uuid;
+  circle_row circles;
+  code text;
+  shared_task uuid;
+  private_task uuid;
+  visible integer;
+  activity record;
+begin
+  -- Two accounts sign up; the trigger must hand each one a handle.
+  insert into auth.users (email, raw_user_meta_data)
+    values ('alice@example.com', '{"fullName":"Alice"}') returning id into alice;
+  insert into auth.users (email) values ('bob@example.com') returning id into bob;
+  insert into auth.users (email) values ('alice@other.com') returning id into carol;
+
+  assert (select username from profiles where id = alice) = 'alice',
+    'alice should get the handle @alice';
+  assert (select display_name from profiles where id = alice) = 'Alice',
+    'display name should come from the sign-up metadata';
+  assert (select username from profiles where id = carol) = 'alice1',
+    format('a taken handle must get a suffix, got %s', (select username from profiles where id = carol));
+
+  -- ── Alice creates a circle ──
+  perform set_config('request.jwt.claim.sub', alice::text, false);
+  execute 'set role authenticated';
+
+  circle_row := create_circle('Biology finals', '📚');
+  code := circle_row.invite_code;
+  assert code ~ '^[A-Z0-9]{6}$', format('invite code should be 6 chars, got %s', code);
+  assert (select count(*) from circle_members where circle_id = circle_row.id) = 1,
+    'the creator should be the first member';
+
+  -- A shared task and a private one.
+  insert into tasks (user_id, circle_id, text, created_at)
+    values (alice, circle_row.id, 'Book the lab slot', current_date) returning id into shared_task;
+  insert into tasks (user_id, text, created_at)
+    values (alice, 'Salary negotiation notes', current_date) returning id into private_task;
+
+  -- ── Bob joins ──
+  execute 'reset role';
+  perform set_config('request.jwt.claim.sub', bob::text, false);
+  execute 'set role authenticated';
+
+  perform join_circle_by_code(lower(code));  -- codes are case-insensitive
+  assert (select count(*) from circle_members where circle_id = circle_row.id) = 2,
+    'bob should now be a member';
+
+  -- Bob sees the shared task and nothing else of Alice's.
+  select count(*) into visible from tasks;
+  assert visible = 1, format('bob should see exactly 1 task, saw %s', visible);
+  assert (select text from tasks) = 'Book the lab slot', 'bob must not see the private task';
+
+  -- Bob ticks the shared task off: the trigger credits Bob, not Alice.
+  update tasks set completed = true where id = shared_task;
+  execute 'reset role';
+  assert (select completed_by from tasks where id = shared_task) = bob,
+    'the person who ticked the box owns the completion';
+  assert (select user_id from tasks where id = shared_task) = alice,
+    'the author of the task is unchanged';
+
+  -- Bob cannot delete a task he did not write.
+  perform set_config('request.jwt.claim.sub', bob::text, false);
+  execute 'set role authenticated';
+  delete from tasks where id = shared_task;
+  execute 'reset role';
+  assert (select count(*) from tasks where id = shared_task) = 1,
+    'only the author or the circle owner may delete a shared task';
+
+  -- ── The streak board ──
+  perform set_config('request.jwt.claim.sub', alice::text, false);
+  execute 'set role authenticated';
+
+  select count(*) into visible from circle_activity(circle_row.id, current_date);
+  assert visible = 2, format('the board should list both members, listed %s', visible);
+
+  select * into activity from circle_activity(circle_row.id, current_date) a where a.user_id = bob;
+  assert activity.completed_today = 1,
+    format('bob finished one task today, board says %s', activity.completed_today);
+  assert activity.active_dates = array[current_date],
+    format('bob should have one active date, got %s', activity.active_dates);
+  assert activity.username = 'bob', 'the board shows handles';
+
+  select * into activity from circle_activity(circle_row.id, current_date) a where a.user_id = alice;
+  assert activity.completed_today = 0,
+    'alice gets no credit for a task bob completed';
+  assert activity.role = 'owner', 'alice owns the circle';
+  execute 'reset role';
+
+  -- ── An outsider is locked out entirely ──
+  perform set_config('request.jwt.claim.sub', carol::text, false);
+  execute 'set role authenticated';
+  assert (select count(*) from circles) = 0, 'a non-member cannot read the circle';
+  assert (select count(*) from tasks) = 0, 'a non-member cannot read the shared task';
+  begin
+    perform circle_activity(circle_row.id, current_date);
+    raise exception 'circle_activity must refuse a non-member';
+  exception
+    when insufficient_privilege then null;  -- expected
+  end;
+  execute 'reset role';
+
+  -- ── A bad code, and a duplicate handle ──
+  perform set_config('request.jwt.claim.sub', bob::text, false);
+  execute 'set role authenticated';
+  begin
+    perform join_circle_by_code('ZZZZZZ');
+    raise exception 'an unknown invite code must be refused';
+  exception
+    when no_data_found then null;  -- expected (P0002)
+  end;
+
+  begin
+    update profiles set username = 'alice' where id = bob;
+    raise exception 'a taken handle must be refused';
+  exception
+    when unique_violation then null;  -- expected
+  end;
+
+  begin
+    update profiles set username = 'Bad Handle!' where id = bob;
+    raise exception 'an invalid handle must be refused';
+  exception
+    when check_violation then null;  -- expected
+  end;
+  execute 'reset role';
+
+  -- Un-ticking clears the credit again.
+  perform set_config('request.jwt.claim.sub', alice::text, false);
+  execute 'set role authenticated';
+  update tasks set completed = false where id = shared_task;
+  execute 'reset role';
+  assert (select completed_by from tasks where id = shared_task) is null,
+    'reopening a task clears who completed it';
+
+  assert (select count(*) from tasks where id = private_task) = 1, 'the private task is untouched';
+
+  raise notice 'ALL SQL BEHAVIOUR CHECKS PASSED';
+end $$;

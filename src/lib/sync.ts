@@ -80,11 +80,29 @@ function sessionToRow(userId: string, session: TimerSession) {
 
 export async function fetchUserTasks(userId: string): Promise<Task[] | null> {
   try {
-    const { data, error } = await supabase
+    // Tasks that belong to a circle live on that circle's page, not in the
+    // personal list — otherwise a shared task would be rewritten as private the
+    // next time this browser synced it.
+    let { data, error } = await supabase
       .from('tasks')
       .select('*')
       .eq('user_id', userId)
+      .is('circle_id', null)
       .order('inserted_at', { ascending: false });
+
+    // 42703 = undefined_column: the collaboration migration hasn't been run on
+    // this project yet. Fall back to the pre-circles query rather than leaving
+    // the user staring at an empty list.
+    if (error?.code === '42703') {
+      console.warn(
+        'tasks.circle_id is missing — run supabase/migrations/002_profiles_and_circles.sql to enable circles.',
+      );
+      ({ data, error } = await supabase
+        .from('tasks')
+        .select('*')
+        .eq('user_id', userId)
+        .order('inserted_at', { ascending: false }));
+    }
 
     if (error) {
       console.error('Failed to fetch tasks:', error.message);

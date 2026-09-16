@@ -6,6 +6,7 @@ import {
   CalendarDays,
   BarChart3,
   Sparkles,
+  Users,
   Settings,
   Sun,
   Moon,
@@ -63,6 +64,17 @@ export default function Sidebar() {
             <span>{item.label}</span>
           </NavLink>
         ))}
+
+        <div className="nav-section">Together</div>
+        <NavLink
+          to="/app/circles"
+          className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+          aria-label="Circles"
+          title="Circles"
+        >
+          <Users size={18} />
+          <span>Circles</span>
+        </NavLink>
 
         <div className="nav-section">Plan</div>
         <NavLink
