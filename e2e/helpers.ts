@@ -4,7 +4,18 @@ import { SUPABASE_URL } from '../playwright.config';
 
 export interface BackendState {
   users: { id: string; email: string }[];
-  profiles: { id: string; username: string; display_name: string | null }[];
+  profiles: {
+    id: string;
+    username: string;
+    display_name: string | null;
+    bio: string | null;
+    avatar_emoji: string;
+    avatar_color: string;
+    is_public: boolean;
+    show_streak: boolean;
+    show_focus_time: boolean;
+    show_completed: boolean;
+  }[];
   circles: { id: string; name: string; owner_id: string; invite_code: string }[];
   circle_members: { circle_id: string; user_id: string; role: string }[];
   tasks: {

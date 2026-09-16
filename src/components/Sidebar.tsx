@@ -7,6 +7,7 @@ import {
   BarChart3,
   Sparkles,
   Users,
+  UserRound,
   Settings,
   Sun,
   Moon,
@@ -103,6 +104,16 @@ export default function Sidebar() {
         </button>
 
         <NavLink
+          to="/app/profile"
+          className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+          aria-label="Your profile"
+          title="Your profile"
+        >
+          <UserRound size={18} />
+          <span>Your profile</span>
+        </NavLink>
+
+        <NavLink
           to="/app/settings"
           className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
           aria-label="Settings"
@@ -128,12 +139,12 @@ export default function Sidebar() {
 
         {user && (
           <div className="sidebar-account">
-            <div className="sidebar-account-info" title={displayName}>
+            <NavLink to="/app/profile" className="sidebar-account-info" title="Your profile">
               <span className="sidebar-account-avatar" aria-hidden="true">
                 {displayName.charAt(0).toUpperCase()}
               </span>
               <span className="sidebar-account-email">{displayName}</span>
-            </div>
+            </NavLink>
             <button
               type="button"
               className="nav-item sidebar-signout"

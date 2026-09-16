@@ -22,6 +22,8 @@ const AIDecompose = lazy(() => import('./components/AIDecompose'));
 const Settings = lazy(() => import('./components/Settings'));
 const Circles = lazy(() => import('./components/Circles'));
 const CircleDetail = lazy(() => import('./components/CircleDetail'));
+const Profile = lazy(() => import('./components/Profile'));
+const PublicProfile = lazy(() => import('./components/PublicProfile'));
 
 function RouteFallback() {
   return (
@@ -50,6 +52,7 @@ function AppShell() {
             <Route path="tasks" element={<TaskList />} />
             <Route path="calendar" element={<CalendarView />} />
             <Route path="analytics" element={<Analytics />} />
+            <Route path="profile" element={<Profile />} />
             <Route path="circles" element={<Circles />} />
             <Route path="circles/:circleId" element={<CircleDetail />} />
             <Route path="ai-decompose" element={<AIDecompose />} />
@@ -107,6 +110,15 @@ export default function App() {
           <Route path="/signup" element={<Signup />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password" element={<ResetPassword />} />
+          {/* A shared profile opens for anyone holding the link, signed in or not. */}
+          <Route
+            path="/u/:username"
+            element={
+              <Suspense fallback={<RouteFallback />}>
+                <PublicProfile />
+              </Suspense>
+            }
+          />
           <Route element={<ProtectedRoute />}>
             <Route path="/app/*" element={<AppShell />} />
           </Route>

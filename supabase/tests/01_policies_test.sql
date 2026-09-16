@@ -12,6 +12,7 @@ declare
   private_task uuid;
   visible integer;
   activity record;
+  profile_row record;
 begin
   -- Two accounts sign up; the trigger must hand each one a handle.
   insert into auth.users (email, raw_user_meta_data)
@@ -92,30 +93,43 @@ begin
   assert activity.role = 'owner', 'alice owns the circle';
   execute 'reset role';
 
-  -- A focus session late in the evening must land on the member's own day, not
-  -- on the UTC day. 03:00 UTC is still "yesterday evening" at UTC-08:00.
+  -- A focus session is credited to the day it was for the person who ran it.
+  -- 03:00 UTC is still "yesterday evening" for someone at UTC-08:00, and that
+  -- stays true no matter which timezone the person reading the board is in.
   insert into timer_sessions (user_id, duration, completed, timestamp)
     values (bob, 1500, true, (current_date + time '03:00') at time zone 'UTC');
 
   perform set_config('request.jwt.claim.sub', alice::text, false);
   execute 'set role authenticated';
 
+  -- Bob's profile says UTC, so the session belongs to today.
   select * into activity
     from circle_activity(circle_row.id, current_date, 0) a where a.user_id = bob;
-  assert activity.sessions_today = 1,
-    'in UTC the 03:00 session belongs to today';
+  assert activity.sessions_today = 1, 'at UTC the 03:00 session belongs to today';
+  execute 'reset role';
+
+  -- Move Bob to California. The same row now belongs to his yesterday.
+  update profiles set tz_offset_minutes = 480 where id = bob;
+
+  perform set_config('request.jwt.claim.sub', alice::text, false);
+  execute 'set role authenticated';
 
   select * into activity
-    from circle_activity(circle_row.id, current_date - 1, 480) a where a.user_id = bob;
+    from circle_activity(circle_row.id, current_date, 0) a where a.user_id = bob;
+  assert activity.sessions_today = 0,
+    format('bob''s 7pm session is not on his today, board says %s', activity.sessions_today);
+
+  select * into activity
+    from circle_activity(circle_row.id, current_date - 1, 0) a where a.user_id = bob;
   assert activity.sessions_today = 1,
-    format('at UTC-08:00 the same session belongs to yesterday, board says %s',
-           activity.sessions_today);
+    'it belongs to the day it was for him, not the day it was in UTC';
   assert activity.focus_seconds_today = 1500, 'and carries its focus time with it';
 
+  -- Alice's own offset must not move Bob's day around.
   select * into activity
-    from circle_activity(circle_row.id, current_date, 480) a where a.user_id = bob;
-  assert activity.sessions_today = 0,
-    'so it must not also be counted on the UTC-08:00 today';
+    from circle_activity(circle_row.id, current_date - 1, -600) a where a.user_id = bob;
+  assert activity.sessions_today = 1,
+    'a reader in Sydney sees bob credited on bob''s day, not on hers';
   execute 'reset role';
 
   -- ── An outsider is locked out entirely ──
@@ -165,6 +179,53 @@ begin
     'reopening a task clears who completed it';
 
   assert (select count(*) from tasks where id = private_task) = 1, 'the private task is untouched';
+
+  -- ── Shared profiles ──
+  perform set_config('request.jwt.claim.sub', bob::text, false);
+  execute 'set role authenticated';
+  -- The shared task was reopened above, so give Bob something finished to count.
+  insert into tasks (user_id, text, created_at, completed)
+    values (bob, 'read one chapter', current_date, true);
+  update profiles
+    set bio = 'Chemistry, mostly.', avatar_emoji = '🔥', avatar_color = 'ocean',
+        display_name = 'Bob', tz_offset_minutes = 0
+    where id = bob;
+  execute 'reset role';
+
+  -- A signed-out visitor following a link gets the card and the opted-in numbers.
+  execute 'set role anon';
+  select * into profile_row from public_profile('BOB');  -- handles are case-insensitive
+  assert profile_row.username = 'bob', 'a shared profile opens for a signed-out visitor';
+  assert profile_row.bio = 'Chemistry, mostly.', 'the bio is shared';
+  assert profile_row.avatar_emoji = '🔥', 'the avatar is shared';
+  assert profile_row.completed_total = 1,
+    format('bob finished one task, card says %s', profile_row.completed_total);
+  assert profile_row.active_dates = array[current_date], 'the streak dates are shared';
+  execute 'reset role';
+
+  -- Switching a number off removes it, and only it.
+  update profiles set show_streak = false, show_focus_time = false where id = bob;
+  execute 'set role anon';
+  select * into profile_row from public_profile('bob');
+  assert profile_row.active_dates is null, 'a hidden streak is not returned at all';
+  assert profile_row.focus_seconds_total is null, 'a hidden focus time is not returned at all';
+  assert profile_row.completed_total = 1, 'the number still switched on is unaffected';
+  execute 'reset role';
+
+  -- Switching the profile off closes the link, and looks like a handle nobody owns.
+  update profiles set is_public = false where id = bob;
+  execute 'set role anon';
+  assert (select count(*) from public_profile('bob')) = 0, 'a private profile returns nothing';
+  assert (select count(*) from public_profile('nobody_here')) = 0,
+    'an unknown handle returns nothing, exactly the same way';
+  -- And the table itself stays shut to a signed-out visitor.
+  begin
+    perform 1 from profiles;
+    assert (select count(*) from profiles) = 0, 'anon cannot read the profiles table directly';
+  exception
+    when insufficient_privilege then null;  -- also fine
+  end;
+  execute 'reset role';
 
   raise notice 'ALL SQL BEHAVIOUR CHECKS PASSED';
 end $$;

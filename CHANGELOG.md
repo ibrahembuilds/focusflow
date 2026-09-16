@@ -4,6 +4,28 @@ All notable changes to the FocusFlow productivity platform.
 
 ---
 
+## [Unreleased] — Profiles you can share
+
+### 🪪 A profile of your own
+- A profile page with a name, a `@username`, a bio, an emoji, and a colour — with a live preview of the exact card a friend will see
+- Every profile has a link, `/u/yourname`, that opens for anyone you send it to, signed in or not; a one-tap Copy button puts it on your clipboard
+- Tap any member of a circle to open their profile, straight from the streak board
+
+### 🔒 You decide what is on it
+- Four switches: share the profile at all, show your streak, show tasks finished, show focus time — each one independent
+- A number you switch off is not hidden in the page, it is never sent; a profile you switch off returns nothing at all, and looks exactly like a handle nobody owns
+- Task text is never shared under any setting. The shared card carries counts and dates only
+
+### 🌍 Your day, your timezone
+- A member's day now starts and ends where *they* are. A 7pm focus session in California is credited to that day on every board, including one being read in London
+
+### 🧪 Tests
+- Seven more Playwright tests cover building a card, following a shared link while signed out, each privacy switch, and opening a circle mate's profile
+- One of them reads computed colours in both themes, because a CSS override that out-specified the active day silently greyed out today's square with every other test still passing
+- The E2E servers are no longer reused between runs — a preview left over from an earlier session kept serving the previous bundle, so the suite passed against code that was no longer on disk
+
+---
+
 ## [Unreleased] — Circles, usernames & an end-to-end test suite
 
 ### 👥 Circles — shared lists for students, friends, and coworkers

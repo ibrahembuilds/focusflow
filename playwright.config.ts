@@ -50,7 +50,9 @@ export default defineConfig({
     {
       command: 'node e2e/fake-supabase.mjs',
       url: `${SUPABASE_URL}/__test/health`,
-      reuseExistingServer: !process.env.CI,
+      // Same reasoning as the app server below: a stale process would serve
+      // yesterday's rules and quietly hide a regression.
+      reuseExistingServer: false,
       timeout: 30_000,
     },
     {

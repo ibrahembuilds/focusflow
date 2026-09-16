@@ -3598,6 +3598,420 @@ h3 {
   }
 }
 
+/* ── Profiles: your card, and the one you share ──────────────── */
+
+/* One variable per palette choice, so an avatar, a swatch, and a card band all
+   read the same colour without each one knowing the palette. */
+.avatar-forest { --avatar: #2f7d5a; --avatar-soft: rgb(47 125 90 / 0.14); }
+.avatar-ocean  { --avatar: #2c6d8f; --avatar-soft: rgb(44 109 143 / 0.14); }
+.avatar-violet { --avatar: #6b5a9a; --avatar-soft: rgb(107 90 154 / 0.14); }
+.avatar-rose   { --avatar: #a75470; --avatar-soft: rgb(167 84 112 / 0.14); }
+.avatar-amber  { --avatar: #9a681e; --avatar-soft: rgb(154 104 30 / 0.14); }
+
+:root[data-theme="dark"] .avatar-forest { --avatar: #56b98a; --avatar-soft: rgb(86 185 138 / 0.18); }
+:root[data-theme="dark"] .avatar-ocean  { --avatar: #64b4d5; --avatar-soft: rgb(100 180 213 / 0.18); }
+:root[data-theme="dark"] .avatar-violet { --avatar: #9e8dd0; --avatar-soft: rgb(158 141 208 / 0.18); }
+:root[data-theme="dark"] .avatar-rose   { --avatar: #d1849d; --avatar-soft: rgb(209 132 157 / 0.18); }
+:root[data-theme="dark"] .avatar-amber  { --avatar: #d6aa62; --avatar-soft: rgb(214 170 98 / 0.18); }
+
+.profile-swatch {
+  background: var(--avatar, var(--color-primary));
+}
+
+.profile-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(280px, 0.85fr);
+  align-items: start;
+  gap: 1.25rem;
+}
+
+.profile-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  min-width: 0;
+}
+
+.profile-preview {
+  position: sticky;
+  top: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  min-width: 0;
+}
+
+.profile-preview-title {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0;
+  color: var(--text-tertiary);
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.profile-bio-input {
+  min-height: 5rem;
+  resize: vertical;
+  line-height: 1.5;
+}
+
+/* ── The card itself ── */
+
+.profile-card {
+  position: relative;
+  overflow: hidden;
+  padding: 0 1.25rem 1.25rem;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-xl);
+  background: var(--bg-surface-raised);
+  box-shadow: var(--shadow-md);
+  text-align: center;
+}
+
+.profile-card-band {
+  height: 74px;
+  margin: 0 -1.25rem 0;
+  background: linear-gradient(135deg, var(--avatar, var(--color-primary)), var(--bg-soft) 190%);
+}
+
+.profile-card-identity {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.15rem;
+}
+
+.profile-avatar {
+  display: grid;
+  place-items: center;
+  width: 4.25rem;
+  height: 4.25rem;
+  margin-top: -2.15rem;
+  margin-bottom: 0.5rem;
+  border: 3px solid var(--bg-surface-raised);
+  border-radius: var(--radius-full);
+  background: var(--avatar-soft, var(--bg-soft));
+  box-shadow: var(--shadow-sm);
+  font-size: 1.9rem;
+  line-height: 1;
+}
+
+.profile-card-name {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+  font-weight: 650;
+  color: var(--text-primary);
+  overflow-wrap: anywhere;
+}
+
+.profile-card-handle {
+  margin: 0;
+  color: var(--avatar, var(--color-primary));
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.profile-card-bio {
+  margin: 0.75rem 0 0;
+  color: var(--text-secondary);
+  font-size: 0.86rem;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+}
+
+.profile-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(84px, 1fr));
+  gap: 0.5rem;
+  margin: 1.1rem 0 0;
+}
+
+.profile-stat {
+  padding: 0.6rem 0.4rem;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface);
+}
+
+.profile-stat dt {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  color: var(--text-tertiary);
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.profile-stat dd {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 0.22rem;
+  margin: 0.25rem 0 0;
+  color: var(--text-primary);
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+  font-weight: 650;
+}
+
+.profile-stat dd small {
+  color: var(--text-tertiary);
+  font-size: 0.68rem;
+  font-weight: 500;
+}
+
+.profile-activity {
+  margin-top: 1.1rem;
+  text-align: left;
+}
+
+.profile-activity-label {
+  display: block;
+  margin-bottom: 0.4rem;
+  color: var(--text-tertiary);
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.profile-activity-grid {
+  display: grid;
+  grid-template-columns: repeat(15, 1fr);
+  gap: 3px;
+}
+
+.profile-activity-day {
+  aspect-ratio: 1;
+  border-radius: 3px;
+  background: var(--bg-soft);
+}
+
+.profile-activity-day.on {
+  background: var(--avatar, var(--color-primary));
+}
+
+/* On a dark card the default empty cell all but vanishes into the surface.
+   Scoped to :not(.on) — an unscoped override out-specifies `.on` and would
+   paint the active days grey too. */
+:root[data-theme="dark"] .profile-activity-day:not(.on) {
+  background: var(--border-default);
+}
+
+.profile-card-quiet,
+.profile-card-since {
+  margin: 1rem 0 0;
+  color: var(--text-tertiary);
+  font-size: 0.75rem;
+}
+
+.profile-share-link {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.4rem 0.4rem 0.4rem 0.7rem;
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius-md);
+  background: var(--bg-soft);
+}
+
+.profile-share-link code {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: 0.74rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.profile-share-off {
+  text-align: center;
+}
+
+/* ── Sharing switches ── */
+
+.share-toggles {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin-top: 0.85rem;
+}
+
+.share-toggle {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface);
+  cursor: pointer;
+  transition: border-color var(--transition-fast), background var(--transition-fast);
+}
+
+.share-toggle:hover {
+  background: var(--bg-surface-hover);
+}
+
+.share-toggle:has(input:checked) {
+  border-color: var(--color-primary);
+}
+
+.share-toggle:has(input:disabled) {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.share-toggle input {
+  width: 1.05rem;
+  height: 1.05rem;
+  margin-top: 0.12rem;
+  flex-shrink: 0;
+  accent-color: var(--color-primary);
+}
+
+.share-toggle span {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.share-toggle strong {
+  font-size: 0.86rem;
+  font-weight: 600;
+}
+
+.share-toggle small {
+  color: var(--text-tertiary);
+  font-size: 0.75rem;
+  line-height: 1.45;
+}
+
+/* ── The page a shared link opens ── */
+
+.public-profile-page {
+  min-height: 100dvh;
+  padding: 1.5rem 1rem 3rem;
+  background: var(--bg-root);
+}
+
+.public-profile-header {
+  max-width: 420px;
+  margin: 0 auto 1rem;
+}
+
+.public-profile-main {
+  max-width: 420px;
+  margin: 0 auto;
+}
+
+.public-profile-cta {
+  margin-top: 1.25rem;
+  text-align: center;
+}
+
+.public-profile-cta p {
+  margin: 0 0 0.6rem;
+  color: var(--text-secondary);
+  font-size: 0.88rem;
+}
+
+/* ── Profile summary in Settings and on the circle board ── */
+
+a.sidebar-account-info {
+  color: inherit;
+  text-decoration: none;
+  border-radius: var(--radius-md);
+  transition: background var(--transition-fast);
+}
+
+a.sidebar-account-info:hover {
+  background: var(--bg-surface-hover);
+}
+
+.settings-profile-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin: 0.85rem 0 1rem;
+  padding: 0.7rem 0.8rem;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface);
+}
+
+.settings-profile-avatar {
+  display: grid;
+  place-items: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  flex-shrink: 0;
+  border-radius: var(--radius-full);
+  background: var(--avatar-soft, var(--bg-soft));
+  font-size: 1.2rem;
+}
+
+.settings-profile-identity {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+
+.settings-profile-identity strong {
+  font-size: 0.9rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.settings-profile-identity small {
+  color: var(--avatar, var(--color-primary));
+  font-size: 0.76rem;
+  font-weight: 600;
+}
+
+.streak-avatar {
+  background: var(--avatar, var(--color-primary));
+  font-size: 0.95rem;
+}
+
+.streak-name {
+  color: var(--text-primary);
+  font-size: 0.88rem;
+  font-weight: 600;
+  text-decoration: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.streak-name:hover {
+  color: var(--color-primary);
+  text-decoration: underline;
+}
+
+@media (max-width: 900px) {
+  .profile-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .profile-preview {
+    position: static;
+    order: -1;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

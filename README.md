@@ -40,7 +40,8 @@ Combined with a built-in **Pomodoro focus timer**, **drag-and-drop task organiza
 | 📅 **Calendar** | Monthly calendar with task indicators and daily task view |
 | 👥 **Circles** | Shared task lists for a study group, friends, or a team — join with a 6-character invite code |
 | 🔥 **Shared streaks** | See everyone in a circle's last 7 days, today's finished tasks, and focus time — without exposing anyone's task text |
-| 🏷️ **Usernames** | A unique public `@handle` per account, assigned at sign-up and renameable in Settings |
+| 🏷️ **Usernames** | A unique public `@handle` per account, assigned at sign-up and renameable any time |
+| 🪪 **Shareable profiles** | A profile card at `/u/yourname` with a bio, emoji, and colour — and four switches deciding which numbers appear on it |
 | 🎨 **Premium UI** | Calm, glass-morphism design system with light/dark themes and 5 accent colors |
 
 ## 🚀 Quick Start
@@ -67,8 +68,8 @@ npm run build
 
 FocusFlow needs two services configured — see [`.env.example`](.env.example) for the full list:
 
-1. **Supabase** — create a project, then in the SQL editor run [`supabase/schema.sql`](supabase/schema.sql) followed by [`supabase/migrations/002_profiles_and_circles.sql`](supabase/migrations/002_profiles_and_circles.sql) (usernames, circles, shared streaks). Set `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`.
-   Both files are idempotent, so re-running them on an existing project is safe.
+1. **Supabase** — create a project, then in the SQL editor run [`supabase/schema.sql`](supabase/schema.sql) then the migrations in [`supabase/migrations/`](supabase/migrations) in order — `002` adds usernames, circles, and shared streaks; `003` adds shareable profiles. Set `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`.
+   Every file is idempotent, so re-running them on an existing project is safe.
 2. **OpenAI** — used by the AI task breakdown feature. The app deploys to Netlify; set `OPENAI_API_KEY` (and optionally `OPENAI_MODEL`) as environment variables in Netlify's site settings — they're read server-side by the edge function at [`netlify/edge-functions/decompose.ts`](netlify/edge-functions/decompose.ts), never exposed to the browser.
 
 ## 🏗️ Architecture
@@ -86,6 +87,9 @@ src/
 │   ├── Analytics.tsx          # Recharts charts
 │   ├── Circles.tsx            # Create/join shared circles
 │   ├── CircleDetail.tsx       # Shared list + streak board
+│   ├── Profile.tsx            # Edit your card and what it shares
+│   ├── PublicProfile.tsx      # /u/<username> — the link you send
+│   ├── ProfileCard.tsx        # The card itself, preview and public
 │   ├── Sidebar.tsx            # Navigation + account menu
 │   ├── Settings.tsx           # Config + data management
 │   └── Seo.tsx                # Per-route meta tags
@@ -93,7 +97,7 @@ src/
 │   ├── auth.tsx               # Supabase Auth context
 │   ├── supabase.ts            # Supabase client
 │   ├── sync.ts                # Task/session sync with Supabase (offline-safe write queue)
-│   ├── profile.ts             # Usernames and profiles
+│   ├── profile.ts             # Usernames, profiles, and sharing rules
 │   ├── circles.ts             # Circles, shared tasks, shared streaks
 │   └── api.ts                 # AI decompose API client
 ├── store.ts                   # Zustand state management
@@ -122,6 +126,11 @@ visibility rules.
 The first run needs a browser: `npx playwright install chromium`. If your
 environment already ships one, point at it with `PLAYWRIGHT_CHROMIUM_PATH`
 instead.
+
+Both servers are started fresh every run rather than reused, so the suite always
+tests the bundle currently on disk. If a run reports that a port is in use, an
+earlier `vite preview` or `node e2e/fake-supabase.mjs` is still alive — stop it
+and run again.
 
 The database rules themselves are checked separately — see
 [`supabase/tests/README.md`](supabase/tests/README.md).

@@ -16,13 +16,13 @@ test.describe('every account has a username', () => {
 
     expect(profile?.username).toMatch(/^[a-z0-9_]{3,20}$/);
 
-    await page.goto('/app/settings');
+    await page.goto('/app/profile');
     await expect(page.getByLabel('Username')).toHaveValue(profile!.username);
   });
 
   test('you can rename your handle and it sticks', async ({ page, request }) => {
     await signUp(page, uniqueEmail('rename'));
-    await page.goto('/app/settings');
+    await page.goto('/app/profile');
 
     await page.getByLabel('Name', { exact: true }).fill('Ibrahem');
     await page.getByLabel('Username').fill('ibrahem_builds');
@@ -39,7 +39,7 @@ test.describe('every account has a username', () => {
 
   test('a handle someone already owns is refused', async ({ page }) => {
     await signUp(page, uniqueEmail('first'));
-    await page.goto('/app/settings');
+    await page.goto('/app/profile');
     await page.getByLabel('Username').fill('takenhandle');
     await page.getByRole('button', { name: 'Save profile' }).click();
     await expect(page.getByText('Saved')).toBeVisible();
@@ -48,7 +48,7 @@ test.describe('every account has a username', () => {
     await page.waitForURL((url) => !url.pathname.startsWith('/app'));
 
     await signUp(page, uniqueEmail('second'));
-    await page.goto('/app/settings');
+    await page.goto('/app/profile');
     await page.getByLabel('Username').fill('takenhandle');
     await page.getByRole('button', { name: 'Save profile' }).click();
     await expect(page.getByRole('alert')).toContainText('@takenhandle is already taken.');
@@ -56,9 +56,21 @@ test.describe('every account has a username', () => {
 
   test('an invalid handle is rejected before it is sent', async ({ page }) => {
     await signUp(page, uniqueEmail('invalid'));
-    await page.goto('/app/settings');
+    await page.goto('/app/profile');
     await page.getByLabel('Username').fill('ab');
     await page.getByRole('button', { name: 'Save profile' }).click();
     await expect(page.getByRole('alert')).toContainText('at least 3 characters');
+  });
+
+  test('Settings points at the profile instead of duplicating it', async ({ page }) => {
+    await signUp(page, uniqueEmail('settings'));
+    await page.goto('/app/settings');
+
+    await expect(page.getByRole('link', { name: 'Edit profile' })).toBeVisible();
+    await expect(page.getByLabel('Username')).toHaveCount(0);
+
+    await page.getByRole('link', { name: 'Edit profile' }).click();
+    await page.waitForURL('**/app/profile');
+    await expect(page.getByRole('heading', { name: 'Your profile' })).toBeVisible();
   });
 });

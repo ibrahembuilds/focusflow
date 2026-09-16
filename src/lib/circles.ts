@@ -22,6 +22,8 @@ export interface MemberActivity {
   username: string | null;
   displayName: string | null;
   role: string;
+  avatarEmoji: string;
+  avatarColor: string;
   completedToday: number;
   sessionsToday: number;
   focusSecondsToday: number;
@@ -60,6 +62,8 @@ interface ActivityRow {
   sessions_today: number;
   focus_seconds_today: number;
   active_dates: string[] | null;
+  avatar_emoji: string | null;
+  avatar_color: string | null;
 }
 
 function circleFromRow(row: CircleRow): Circle {
@@ -280,6 +284,8 @@ export async function fetchCircleActivity(
         username: row.username,
         displayName: row.display_name,
         role: row.role,
+        avatarEmoji: row.avatar_emoji || '🌱',
+        avatarColor: row.avatar_color || 'forest',
         completedToday: row.completed_today,
         sessionsToday: row.sessions_today,
         focusSecondsToday: row.focus_seconds_today,

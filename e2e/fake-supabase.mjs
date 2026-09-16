@@ -269,43 +269,89 @@ const rpcs = {
       return { status: 403, body: { code: '42501', message: 'not a member of this circle' } };
     }
     const today = body.client_today ?? new Date().toISOString().slice(0, 10);
-    // `Date.getTimezoneOffset()`: minutes behind UTC, so UTC-08:00 sends 480.
-    const offsetMinutes = body.client_tz_offset_minutes ?? 0;
-    const localDay = (timestamp) =>
-      new Date(Date.parse(timestamp) - offsetMinutes * 60_000).toISOString().slice(0, 10);
     const members = db.circle_members.filter((member) => member.circle_id === circleId);
 
     return {
       status: 200,
       body: members.map((member) => {
         const profile = db.profiles.find((item) => item.id === member.user_id);
-        const ownTasks = db.tasks.filter(
-          (task) => task.completed && (task.completed_by ?? task.user_id) === member.user_id,
+        // The member's own offset wins, exactly as in circle_activity: a reader
+        // in London must not move a teammate's day in California.
+        const stats = activityFor(
+          member.user_id,
+          profile?.tz_offset_minutes ?? body.client_tz_offset_minutes ?? 0,
         );
-        const ownSessions = db.timer_sessions.filter(
-          (session) => session.completed && session.user_id === member.user_id,
-        );
-        const dates = new Set([
-          ...ownTasks.map((task) => task.created_at),
-          ...ownSessions.map((session) => localDay(session.timestamp)),
-        ]);
 
         return {
           user_id: member.user_id,
           username: profile?.username ?? null,
           display_name: profile?.display_name ?? null,
           role: member.role,
-          completed_today: ownTasks.filter((task) => task.created_at === today).length,
-          sessions_today: ownSessions.filter((s) => localDay(s.timestamp) === today).length,
-          focus_seconds_today: ownSessions
-            .filter((s) => localDay(s.timestamp) === today)
+          avatar_emoji: profile?.avatar_emoji ?? '🌱',
+          avatar_color: profile?.avatar_color ?? 'forest',
+          completed_today: stats.tasks.filter((task) => task.created_at === today).length,
+          sessions_today: stats.sessions.filter((s) => stats.localDay(s.timestamp) === today).length,
+          focus_seconds_today: stats.sessions
+            .filter((s) => stats.localDay(s.timestamp) === today)
             .reduce((total, s) => total + s.duration, 0),
-          active_dates: [...dates].sort(),
+          active_dates: stats.activeDates,
         };
       }),
     };
   },
+
+  public_profile(body) {
+    const handle = String(body.handle ?? '').trim().toLowerCase();
+    const owner = db.profiles.find((item) => item.username === handle && item.is_public);
+    // A handle nobody owns and one kept private look identical from outside.
+    if (!owner) return { status: 200, body: [] };
+
+    const stats = activityFor(owner.id, owner.tz_offset_minutes ?? 0);
+    return {
+      status: 200,
+      body: [
+        {
+          username: owner.username,
+          display_name: owner.display_name,
+          bio: owner.bio,
+          avatar_emoji: owner.avatar_emoji,
+          avatar_color: owner.avatar_color,
+          member_since: owner.created_at,
+          tz_offset_minutes: owner.tz_offset_minutes ?? 0,
+          show_streak: owner.show_streak,
+          show_focus_time: owner.show_focus_time,
+          show_completed: owner.show_completed,
+          completed_total: owner.show_completed ? stats.tasks.length : null,
+          focus_seconds_total: owner.show_focus_time
+            ? stats.sessions.reduce((total, s) => total + s.duration, 0)
+            : null,
+          active_dates: owner.show_streak ? stats.activeDates : null,
+        },
+      ],
+    };
+  },
 };
+
+/**
+ * One member's finished work, with days measured against `offsetMinutes`
+ * (`Date.getTimezoneOffset()`: minutes behind UTC, so UTC-08:00 passes 480).
+ */
+function activityFor(memberId, offsetMinutes) {
+  const localDay = (timestamp) =>
+    new Date(Date.parse(timestamp) - offsetMinutes * 60_000).toISOString().slice(0, 10);
+
+  const tasks = db.tasks.filter(
+    (task) => task.completed && (task.completed_by ?? task.user_id) === memberId,
+  );
+  const sessions = db.timer_sessions.filter(
+    (session) => session.completed && session.user_id === memberId,
+  );
+  const activeDates = [
+    ...new Set([...tasks.map((task) => task.created_at), ...sessions.map((s) => localDay(s.timestamp))]),
+  ].sort();
+
+  return { tasks, sessions, activeDates, localDay };
+}
 
 // ── HTTP ─────────────────────────────────────────────────────────────────────
 
@@ -367,6 +413,14 @@ function handleAuth(req, res, url, body) {
       id: user.id,
       username: candidate,
       display_name: body?.data?.fullName ?? null,
+      bio: null,
+      avatar_emoji: '🌱',
+      avatar_color: 'forest',
+      is_public: true,
+      show_streak: true,
+      show_focus_time: true,
+      show_completed: true,
+      tz_offset_minutes: 0,
       created_at: user.created_at,
     });
     return send(res, 200, sessionFor(user));
@@ -424,6 +478,7 @@ function handleRest(req, res, url, body) {
     const name = path.slice(4);
     const rpc = rpcs[name];
     if (!rpc) return send(res, 404, { code: '42883', message: `function ${name} does not exist` });
+    // `public_profile` is granted to anon in SQL, so it must answer here too.
     const result = rpc(body ?? {}, userId);
     return send(res, result.status, result.body);
   }

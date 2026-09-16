@@ -254,22 +254,29 @@ export default function CircleDetail() {
         </h2>
         <p className="settings-description">
           Everyone's rhythm over the last 7 days. Only the dates are shared — never the tasks
-          themselves.
+          themselves. Tap a name to open their profile.
         </p>
         <div className="streak-board">
           {activity.map((member) => {
             const active = new Set(member.activeDates);
             return (
               <div key={member.userId} className="streak-row">
-                <span className="streak-avatar" aria-hidden="true">
-                  {memberLabel(member).replace('@', '').charAt(0).toUpperCase()}
+                <span className={`streak-avatar avatar-${member.avatarColor}`} aria-hidden="true">
+                  {member.avatarEmoji}
                 </span>
                 <span className="streak-identity">
-                  <strong>
-                    {memberLabel(member)}
-                    {member.userId === user?.id ? ' (you)' : ''}
-                  </strong>
+                  {member.username ? (
+                    <Link to={`/u/${member.username}`} className="streak-name">
+                      {memberLabel(member)}
+                      {member.userId === user?.id ? ' (you)' : ''}
+                    </Link>
+                  ) : (
+                    <strong>{memberLabel(member)}</strong>
+                  )}
                   <small>
+                    {/* The handle is how people find each other, so it stays on
+                        screen even when a display name is set. */}
+                    {member.username ? `@${member.username} · ` : ''}
                     {member.completedToday} done today · {member.sessionsToday} sessions ·{' '}
                     {formatTime(member.focusSecondsToday)} focused
                   </small>
