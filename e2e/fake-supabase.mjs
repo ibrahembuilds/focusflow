@@ -269,6 +269,10 @@ const rpcs = {
       return { status: 403, body: { code: '42501', message: 'not a member of this circle' } };
     }
     const today = body.client_today ?? new Date().toISOString().slice(0, 10);
+    // `Date.getTimezoneOffset()`: minutes behind UTC, so UTC-08:00 sends 480.
+    const offsetMinutes = body.client_tz_offset_minutes ?? 0;
+    const localDay = (timestamp) =>
+      new Date(Date.parse(timestamp) - offsetMinutes * 60_000).toISOString().slice(0, 10);
     const members = db.circle_members.filter((member) => member.circle_id === circleId);
 
     return {
@@ -283,7 +287,7 @@ const rpcs = {
         );
         const dates = new Set([
           ...ownTasks.map((task) => task.created_at),
-          ...ownSessions.map((session) => session.timestamp.slice(0, 10)),
+          ...ownSessions.map((session) => localDay(session.timestamp)),
         ]);
 
         return {
@@ -292,9 +296,9 @@ const rpcs = {
           display_name: profile?.display_name ?? null,
           role: member.role,
           completed_today: ownTasks.filter((task) => task.created_at === today).length,
-          sessions_today: ownSessions.filter((s) => s.timestamp.slice(0, 10) === today).length,
+          sessions_today: ownSessions.filter((s) => localDay(s.timestamp) === today).length,
           focus_seconds_today: ownSessions
-            .filter((s) => s.timestamp.slice(0, 10) === today)
+            .filter((s) => localDay(s.timestamp) === today)
             .reduce((total, s) => total + s.duration, 0),
           active_dates: [...dates].sort(),
         };

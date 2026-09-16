@@ -263,11 +263,13 @@ export async function deleteCircleTask(taskId: string): Promise<{ error: string 
 export async function fetchCircleActivity(
   circleId: string,
   clientToday: string,
+  timezoneOffsetMinutes: number,
 ): Promise<Result<MemberActivity[]>> {
   try {
     const { data, error } = await supabase.rpc('circle_activity', {
       target_circle: circleId,
       client_today: clientToday,
+      client_tz_offset_minutes: timezoneOffsetMinutes,
     });
 
     if (error) return { data: null, error: error.message };

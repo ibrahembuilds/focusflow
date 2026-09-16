@@ -75,7 +75,11 @@ export default function CircleDetail() {
       const [circleResult, taskResult, activityResult] = await Promise.all([
         fetchCircle(circleId),
         fetchCircleTasks(circleId),
-        fetchCircleActivity(circleId, toLocalDateString(new Date())),
+        fetchCircleActivity(
+          circleId,
+          toLocalDateString(new Date()),
+          new Date().getTimezoneOffset(),
+        ),
       ]);
 
       if (circleResult.data) setCircle(circleResult.data);

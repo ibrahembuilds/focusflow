@@ -320,12 +320,15 @@ create policy "delete own tasks" on tasks
 -- 4. Shared streaks — activity dates only, never task text
 -- ─────────────────────────────────────────────────────────────
 
--- `client_today` is the caller's *local* date. The app stores task dates in the
--- user's own timezone, so comparing against the server's UTC current_date would
--- drift by a day for anyone west of Greenwich in the evening.
+-- `client_today` is the caller's *local* date and `client_tz_offset_minutes` is
+-- `Date.getTimezoneOffset()` — minutes behind UTC, so UTC-08:00 sends 480. The
+-- app records task dates in each user's own timezone, so measuring a day in UTC
+-- here would put an evening focus session on the wrong side of midnight for
+-- anyone west of Greenwich.
 create or replace function public.circle_activity(
   target_circle uuid,
-  client_today date default current_date
+  client_today date default current_date,
+  client_tz_offset_minutes integer default 0
 )
 returns table (
   user_id uuid,
@@ -358,7 +361,9 @@ begin
       and coalesce(t.completed_by, t.user_id) in (select m.user_id from members m)
   ),
   session_days as (
-    select s.user_id as member_id, (s.timestamp at time zone 'UTC')::date as day
+    select
+      s.user_id as member_id,
+      ((s.timestamp at time zone 'UTC') - make_interval(mins => client_tz_offset_minutes))::date as day
     from timer_sessions s
     where s.completed
       and s.timestamp > (client_today - 90)::timestamptz
@@ -379,10 +384,12 @@ begin
         and t.completed and t.created_at = client_today),
     (select count(*)::integer from timer_sessions s
       where s.user_id = m.user_id and s.completed
-        and (s.timestamp at time zone 'UTC')::date = client_today),
+        and ((s.timestamp at time zone 'UTC')
+             - make_interval(mins => client_tz_offset_minutes))::date = client_today),
     (select coalesce(sum(s.duration), 0)::integer from timer_sessions s
       where s.user_id = m.user_id and s.completed
-        and (s.timestamp at time zone 'UTC')::date = client_today),
+        and ((s.timestamp at time zone 'UTC')
+             - make_interval(mins => client_tz_offset_minutes))::date = client_today),
     coalesce(
       (select array_agg(d.day order by d.day) from all_days d where d.member_id = m.user_id),
       '{}'::date[]

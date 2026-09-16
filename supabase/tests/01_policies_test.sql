@@ -92,6 +92,32 @@ begin
   assert activity.role = 'owner', 'alice owns the circle';
   execute 'reset role';
 
+  -- A focus session late in the evening must land on the member's own day, not
+  -- on the UTC day. 03:00 UTC is still "yesterday evening" at UTC-08:00.
+  insert into timer_sessions (user_id, duration, completed, timestamp)
+    values (bob, 1500, true, (current_date + time '03:00') at time zone 'UTC');
+
+  perform set_config('request.jwt.claim.sub', alice::text, false);
+  execute 'set role authenticated';
+
+  select * into activity
+    from circle_activity(circle_row.id, current_date, 0) a where a.user_id = bob;
+  assert activity.sessions_today = 1,
+    'in UTC the 03:00 session belongs to today';
+
+  select * into activity
+    from circle_activity(circle_row.id, current_date - 1, 480) a where a.user_id = bob;
+  assert activity.sessions_today = 1,
+    format('at UTC-08:00 the same session belongs to yesterday, board says %s',
+           activity.sessions_today);
+  assert activity.focus_seconds_today = 1500, 'and carries its focus time with it';
+
+  select * into activity
+    from circle_activity(circle_row.id, current_date, 480) a where a.user_id = bob;
+  assert activity.sessions_today = 0,
+    'so it must not also be counted on the UTC-08:00 today';
+  execute 'reset role';
+
   -- ── An outsider is locked out entirely ──
   perform set_config('request.jwt.claim.sub', carol::text, false);
   execute 'set role authenticated';
