@@ -105,7 +105,7 @@ export default function Onboarding() {
 
         <div className="onboarding-visual" aria-hidden="true">
           <div className="onboarding-brand">
-            <img src="/brand/focusflow-logo.png" alt="" />
+            <img src="/brand/focusflow-mark.svg" alt="" />
             <span>FocusFlow</span>
           </div>
           <img
