@@ -10,6 +10,7 @@ import {
   ListTodo,
   LogOut,
   PartyPopper,
+  Pencil,
   Plus,
   RefreshCw,
   Trash2,
@@ -18,6 +19,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../lib/auth';
 import {
+  CIRCLE_DESCRIPTION_MAX_LENGTH,
   addCircleTask,
   deleteCircle,
   deleteCircleTask,
@@ -27,11 +29,13 @@ import {
   leaveCircle,
   listJoinRequests,
   respondToJoinRequest,
+  setCircleDescription,
   setCircleTaskCompleted,
 } from '../lib/circles';
 import type { Circle, CircleTask, JoinRequest, MemberActivity } from '../lib/circles';
 import { formatTime, streakFromDates, toLocalDateString } from '../store';
-import type { Task } from '../store';
+import type { DecomposedTask, Task } from '../store';
+import AISuggestionsBanner from './AISuggestionsBanner';
 
 /** How often the page re-reads the circle, so members see each other's ticks. */
 const REFRESH_INTERVAL_MS = 30_000;
@@ -80,6 +84,10 @@ export default function CircleDetail() {
   const [priority, setPriority] = useState<NonNullable<Task['priority']>>('medium');
   const [adding, setAdding] = useState(false);
   const [confirmingExit, setConfirmingExit] = useState(false);
+
+  const [editingDescription, setEditingDescription] = useState(false);
+  const [descriptionDraft, setDescriptionDraft] = useState('');
+  const [savingDescription, setSavingDescription] = useState(false);
 
   const [joinRequests, setJoinRequests] = useState<JoinRequest[]>([]);
   const [respondingTo, setRespondingTo] = useState<string | null>(null);
@@ -168,6 +176,37 @@ export default function CircleDetail() {
     setError(null);
   }
 
+  /**
+   * The AI Decompose result lives in the store, not scoped to any one page —
+   * this is what routes it here instead of to the personal list. Each
+   * suggestion is its own insert (addCircleTask, same as a manually typed
+   * one), run in parallel; a partial failure keeps whichever tasks did save
+   * rather than losing the whole batch over one bad request.
+   */
+  async function handleAddDecomposedToCircle(selected: DecomposedTask[]) {
+    if (!user) return;
+    const createdAt = toLocalDateString(new Date());
+    const results = await Promise.all(
+      selected.map((task) => addCircleTask(circleId, user.id, task.text, task.priority, createdAt)),
+    );
+
+    const added: CircleTask[] = [];
+    let failed = 0;
+    for (const result of results) {
+      if (result.data) added.push(result.data);
+      else failed += 1;
+    }
+    if (added.length > 0) setTasks((current) => [...added, ...current]);
+
+    if (failed > 0) {
+      setError(
+        added.length > 0
+          ? `Added ${added.length}, but ${failed} could not be saved.`
+          : 'Could not add those tasks.',
+      );
+    }
+  }
+
   async function handleToggle(task: CircleTask) {
     const completing = !task.completed;
     // Show the tick immediately, then reconcile with whatever the server saved.
@@ -223,6 +262,25 @@ export default function CircleDetail() {
     } catch {
       setError('Copying is blocked in this browser — the code is shown above.');
     }
+  }
+
+  function startEditingDescription() {
+    setDescriptionDraft(circle?.description ?? '');
+    setEditingDescription(true);
+  }
+
+  async function handleSaveDescription() {
+    if (!circle) return;
+    setSavingDescription(true);
+    const { error: saveError } = await setCircleDescription(circle.id, descriptionDraft);
+    setSavingDescription(false);
+
+    if (saveError) {
+      setError(saveError);
+      return;
+    }
+    setCircle({ ...circle, description: descriptionDraft.trim() || null });
+    setEditingDescription(false);
   }
 
   async function handleExit() {
@@ -311,6 +369,58 @@ export default function CircleDetail() {
           </button>
         </div>
       </div>
+
+      {editingDescription ? (
+        <div className="circle-description-edit">
+          <textarea
+            className="input textarea"
+            value={descriptionDraft}
+            maxLength={CIRCLE_DESCRIPTION_MAX_LENGTH}
+            rows={2}
+            placeholder="What's this circle for? Any ground rules members should know."
+            onChange={(event) => setDescriptionDraft(event.target.value)}
+            autoFocus
+          />
+          <div className="circle-description-edit-actions">
+            <small>
+              {descriptionDraft.length}/{CIRCLE_DESCRIPTION_MAX_LENGTH}
+            </small>
+            <button
+              type="button"
+              className="btn btn-ghost btn-sm"
+              onClick={() => setEditingDescription(false)}
+              disabled={savingDescription}
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              className="btn btn-primary btn-sm"
+              onClick={() => void handleSaveDescription()}
+              disabled={savingDescription}
+            >
+              {savingDescription ? 'Saving…' : 'Save'}
+            </button>
+          </div>
+        </div>
+      ) : circle.description ? (
+        <p className="circle-description">
+          {circle.description}
+          {isOwner && (
+            <button type="button" className="circle-description-edit-btn" onClick={startEditingDescription}>
+              <Pencil size={12} aria-hidden="true" />
+              Edit
+            </button>
+          )}
+        </p>
+      ) : (
+        isOwner && (
+          <button type="button" className="circle-description-add-btn" onClick={startEditingDescription}>
+            <Pencil size={12} aria-hidden="true" />
+            Add a note about this circle
+          </button>
+        )
+      )}
 
       {error && (
         <p className="form-error" role="alert">
@@ -414,6 +524,8 @@ export default function CircleDetail() {
           })}
         </div>
       </section>
+
+      <AISuggestionsBanner addLabel="to this circle" onAdd={handleAddDecomposedToCircle} />
 
       <form className="task-input-row" onSubmit={handleAdd}>
         <input

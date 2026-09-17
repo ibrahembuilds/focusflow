@@ -4,7 +4,7 @@ import { Users, Plus, LogIn, Loader2, AlertTriangle, AtSign, Lock, Clock3 } from
 import { useAuth } from '../lib/auth';
 import { fetchProfile } from '../lib/profile';
 import type { Profile } from '../lib/profile';
-import { createCircle, fetchMyCircles, joinCircleByCode } from '../lib/circles';
+import { CIRCLE_DESCRIPTION_MAX_LENGTH, createCircle, fetchMyCircles, joinCircleByCode } from '../lib/circles';
 import type { Circle } from '../lib/circles';
 
 const EMOJI_CHOICES = ['🎯', '📚', '💪', '🧑‍💻', '🎓', '🚀', '☕', '🏡'] as const;
@@ -17,6 +17,7 @@ export default function Circles() {
   const [loadError, setLoadError] = useState<string | null>(null);
 
   const [name, setName] = useState('');
+  const [description, setDescription] = useState('');
   const [emoji, setEmoji] = useState<string>(EMOJI_CHOICES[0]);
   const [requireApproval, setRequireApproval] = useState(false);
   const [creating, setCreating] = useState(false);
@@ -55,7 +56,7 @@ export default function Circles() {
 
     setCreating(true);
     setCreateError(null);
-    const { data, error } = await createCircle(trimmed, emoji, requireApproval);
+    const { data, error } = await createCircle(trimmed, emoji, requireApproval, description);
     setCreating(false);
 
     if (error || !data) {
@@ -64,6 +65,7 @@ export default function Circles() {
     }
     setCircles((current) => [...current, data]);
     setName('');
+    setDescription('');
     setRequireApproval(false);
   }
 
@@ -137,6 +139,18 @@ export default function Circles() {
             maxLength={60}
             placeholder="Example: Biology finals"
             onChange={(event) => setName(event.target.value)}
+          />
+          <label className="field-label" htmlFor="circle-description">
+            Note
+          </label>
+          <textarea
+            id="circle-description"
+            className="input textarea"
+            value={description}
+            maxLength={CIRCLE_DESCRIPTION_MAX_LENGTH}
+            rows={2}
+            placeholder="Optional — what this circle is for, any ground rules members should know"
+            onChange={(event) => setDescription(event.target.value)}
           />
           <div className="emoji-picker" role="group" aria-label="Circle icon">
             {EMOJI_CHOICES.map((choice) => (
