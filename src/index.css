@@ -4474,6 +4474,40 @@ a.sidebar-account-info:hover {
   }
 }
 
+/* Used on pages whose own primary content can reach the corner the floating
+   toast above occupies (the dashboard's main CTA, an auth form's footer
+   links) — a fixed overlay would sit on top of a real button there instead
+   of near empty page background. This variant renders in normal document
+   flow instead, so it takes real space and pushes that content down rather
+   than covering it. */
+.cookie-consent-inline {
+  position: static;
+  max-width: none;
+  margin: 0 0 1.5rem;
+  animation: none;
+}
+
+.auth-page > .cookie-consent-inline {
+  grid-column: 1 / -1;
+}
+
+@media (min-width: 640px) {
+  .cookie-consent-inline .cookie-consent-inner {
+    flex-direction: row;
+    align-items: center;
+    gap: 1.25rem;
+  }
+
+  .cookie-consent-inline .cookie-consent-actions {
+    width: auto;
+    flex-shrink: 0;
+  }
+
+  .cookie-consent-inline .cookie-consent-actions .btn {
+    flex: initial;
+  }
+}
+
 .cookie-consent-inner {
   display: flex;
   flex-direction: column;

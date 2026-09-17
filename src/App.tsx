@@ -52,6 +52,7 @@ function AppShell() {
       <Onboarding />
       <Sidebar />
       <main className="main-content">
+        <CookieConsent inline />
         <Suspense fallback={<RouteFallback />}>
           <Routes>
             <Route index element={<Dashboard />} />
