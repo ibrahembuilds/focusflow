@@ -31,11 +31,14 @@ Combined with a built-in **Pomodoro focus timer**, **drag-and-drop task organiza
 
 | Feature | Description |
 |---------|-------------|
-| 🔐 **Accounts** | Email/password auth via Supabase, with row-level security isolating each user's data |
+| 🔐 **Accounts & profiles** | Email/password auth via Supabase, with row-level security isolating each user's data. Every account gets a public @username for team invites |
 | 💾 **Durable saving** | Tasks and sessions are queued locally and retried until Supabase confirms them, so nothing is lost offline |
-| 🧠 **AI Task Breakdown** | OpenAI-powered decomposition of complex projects into manageable steps |
+| 🧠 **AI Task Breakdown** | OpenAI-powered decomposition of complex projects into manageable steps, with an optional class/subject tag |
 | ⏱️ **Focus Timer** | Pomodoro timer with presets, custom durations, and break tracking |
 | 📋 **Drag & Drop Tasks** | Reactive fluid UI with DND Kit for effortless prioritization |
+| 📝 **Notes** | Freeform notes on any task |
+| 🏷️ **Class / subject tags** | Organize tasks by class or subject — built for students juggling a full course load |
+| 👥 **Team workspaces** | Create a shared workspace, invite classmates or coworkers by username, and work off one shared task list |
 | 📊 **Analytics** | Recharts-powered dashboards — weekly sessions, priority breakdowns |
 | 📅 **Calendar** | Monthly calendar with task indicators and daily task view |
 | 🎨 **Premium UI** | Calm, glass-morphism design system with light/dark themes and 5 accent colors |

@@ -8,11 +8,13 @@ import type { ClarifyingAnswer } from '../lib/api';
 type Step = 'goal' | 'questions';
 
 export default function AIDecompose() {
-  const { isDecomposing, setDecomposing, setDecomposeResult } = useStore();
+  const { isDecomposing, setDecomposing, setDecomposeResult, activeTeamId, teams } = useStore();
   const navigate = useNavigate();
 
   const [step, setStep] = useState<Step>('goal');
   const [goal, setGoal] = useState('');
+  const [subject, setSubject] = useState('');
+  const activeTeamName = teams.find((t) => t.id === activeTeamId)?.name;
   const [questions, setQuestions] = useState<string[]>([]);
   const [answers, setAnswers] = useState<Record<number, string>>({});
   const [error, setError] = useState('');
@@ -33,8 +35,9 @@ export default function AIDecompose() {
       if (results.length === 0) {
         throw new Error('AI returned an unexpected response. Try wording the goal differently.');
       }
-      setDecomposeResult(results);
+      setDecomposeResult(results, subject.trim());
       setGoal('');
+      setSubject('');
       setQuestions([]);
       setAnswers({});
       setStep('goal');
@@ -121,6 +124,25 @@ export default function AIDecompose() {
                 }}
                 style={{ marginBottom: '1rem' }}
               />
+
+              <div style={{ marginBottom: '1rem' }}>
+                <label className="field-label" htmlFor="ai-subject">Class / subject (optional)</label>
+                <input
+                  id="ai-subject"
+                  className="input"
+                  type="text"
+                  maxLength={40}
+                  placeholder="e.g. Chemistry"
+                  value={subject}
+                  onChange={(e) => setSubject(e.target.value)}
+                />
+              </div>
+
+              <p style={{ fontSize: '0.8rem', color: 'var(--text-tertiary)', marginBottom: '1rem' }}>
+                {activeTeamName
+                  ? `These tasks will be added to your team workspace: ${activeTeamName}.`
+                  : 'These tasks will be added to your personal workspace.'}
+              </p>
 
               {error && (
                 <div

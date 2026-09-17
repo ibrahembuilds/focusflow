@@ -12,6 +12,8 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   LogOut,
+  Users,
+  ChevronDown,
 } from 'lucide-react';
 import { useStore } from '../store';
 import { useAuth } from '../lib/auth';
@@ -25,11 +27,22 @@ const navItems = [
 ];
 
 export default function Sidebar() {
-  const { theme, setTheme, sidebarCollapsed, setSidebarCollapsed } = useStore();
+  const {
+    theme,
+    setTheme,
+    sidebarCollapsed,
+    setSidebarCollapsed,
+    teams,
+    activeTeamId,
+    setActiveTeamId,
+    pendingInvites,
+    profile,
+  } = useStore();
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const fullName = typeof user?.user_metadata?.fullName === 'string' ? user.user_metadata.fullName : '';
   const displayName = fullName || user?.email || '?';
+  const activeTeamName = teams.find((t) => t.id === activeTeamId)?.name;
 
   async function handleSignOut() {
     await signOut();
@@ -50,6 +63,23 @@ export default function Sidebar() {
 
       <nav className="sidebar-nav" id="sidebar-navigation" aria-label="Main navigation">
         <div className="nav-section">Workspace</div>
+        <div className="workspace-switcher">
+          <select
+            className="workspace-select"
+            aria-label="Active workspace"
+            value={activeTeamId ?? ''}
+            onChange={(e) => setActiveTeamId(e.target.value || null)}
+          >
+            <option value="">Personal</option>
+            {teams.map((team) => (
+              <option key={team.id} value={team.id}>
+                {team.name}
+              </option>
+            ))}
+          </select>
+          <ChevronDown size={14} className="workspace-select-chevron" aria-hidden="true" />
+        </div>
+        {activeTeamName && <div className="workspace-active-note">Tasks you add go to {activeTeamName}</div>}
         {navItems.map((item) => (
           <NavLink
             key={item.to}
@@ -73,6 +103,20 @@ export default function Sidebar() {
         >
           <Sparkles size={18} />
           <span>AI breakdown</span>
+        </NavLink>
+        <NavLink
+          to="/app/team"
+          className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+          aria-label="Team"
+          title="Team"
+        >
+          <Users size={18} />
+          <span>Team</span>
+          {pendingInvites.length > 0 && (
+            <span className="nav-badge" aria-label={`${pendingInvites.length} pending invitations`}>
+              {pendingInvites.length}
+            </span>
+          )}
         </NavLink>
 
         <div className="nav-spacer" />
@@ -120,7 +164,10 @@ export default function Sidebar() {
               <span className="sidebar-account-avatar" aria-hidden="true">
                 {displayName.charAt(0).toUpperCase()}
               </span>
-              <span className="sidebar-account-email">{displayName}</span>
+              <span className="sidebar-account-text">
+                <span className="sidebar-account-email">{displayName}</span>
+                {profile?.username && <span className="sidebar-account-username">@{profile.username}</span>}
+              </span>
             </div>
             <button
               type="button"

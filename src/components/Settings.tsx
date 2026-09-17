@@ -24,6 +24,8 @@ export default function Settings() {
     accentColor,
     setAccentColor,
     setHasCompletedOnboarding,
+    profile,
+    updateUsername,
   } = useStore();
   const { user, updateProfile } = useAuth();
   const [showReset, setShowReset] = useState(false);
@@ -31,10 +33,19 @@ export default function Settings() {
   const [savingProfile, setSavingProfile] = useState(false);
   const [profileSaved, setProfileSaved] = useState(false);
 
+  const [username, setUsername] = useState('');
+  const [usernameError, setUsernameError] = useState<string | null>(null);
+  const [savingUsername, setSavingUsername] = useState(false);
+  const [usernameSaved, setUsernameSaved] = useState(false);
+
   useEffect(() => {
     const metadataName = user?.user_metadata?.fullName;
     setFullName(typeof metadataName === 'string' ? metadataName : '');
   }, [user]);
+
+  useEffect(() => {
+    setUsername(profile?.username ?? '');
+  }, [profile]);
 
   async function handleSaveProfile() {
     setSavingProfile(true);
@@ -42,6 +53,19 @@ export default function Settings() {
     setSavingProfile(false);
     setProfileSaved(true);
     setTimeout(() => setProfileSaved(false), 2000);
+  }
+
+  async function handleSaveUsername() {
+    setUsernameError(null);
+    setSavingUsername(true);
+    const error = await updateUsername(username);
+    setSavingUsername(false);
+    if (error) {
+      setUsernameError(error);
+      return;
+    }
+    setUsernameSaved(true);
+    setTimeout(() => setUsernameSaved(false), 2000);
   }
 
   function handleExport() {
@@ -106,6 +130,39 @@ export default function Settings() {
             </button>
             {profileSaved && <span className="profile-saved-note">Saved</span>}
           </div>
+
+          <div className="settings-fields" style={{ marginTop: '1.25rem' }}>
+            <div>
+              <label className="field-label" htmlFor="profile-username">Username</label>
+              <div className="username-field">
+                <span className="username-at">@</span>
+                <input
+                  id="profile-username"
+                  className="input"
+                  type="text"
+                  maxLength={20}
+                  value={username}
+                  onChange={(event) => setUsername(event.target.value.toLowerCase())}
+                  placeholder="your_username"
+                />
+              </div>
+              <small className="settings-description" style={{ margin: '0.35rem 0 0' }}>
+                Teammates find and invite you by this. Lowercase letters, numbers, and underscores.
+              </small>
+            </div>
+          </div>
+          <div className="profile-actions">
+            <button
+              className="btn btn-primary btn-sm"
+              onClick={() => void handleSaveUsername()}
+              disabled={savingUsername || username === profile?.username}
+            >
+              {savingUsername ? 'Saving…' : 'Save username'}
+            </button>
+            {usernameSaved && <span className="profile-saved-note">Saved</span>}
+          </div>
+          {usernameError && <p className="field-error">{usernameError}</p>}
+
           {user?.created_at && (
             <small className="profile-member-since">
               Member since {new Date(user.created_at).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}

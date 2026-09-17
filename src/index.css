@@ -435,6 +435,18 @@ h3 {
   color: var(--color-danger-light);
 }
 
+.badge-subject {
+  background: var(--bg-soft);
+  color: var(--text-secondary);
+  text-transform: none;
+}
+
+.field-error {
+  margin-top: 0.5rem;
+  font-size: 0.82rem;
+  color: var(--color-danger-light);
+}
+
 .app-shell {
   display: flex;
 }
@@ -558,6 +570,55 @@ h3 {
   text-transform: uppercase;
 }
 
+.nav-badge {
+  display: inline-flex;
+  min-width: 1.15rem;
+  height: 1.15rem;
+  margin-left: auto;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-full);
+  background: var(--color-danger);
+  color: var(--text-inverse);
+  font-size: 0.65rem;
+  font-weight: 700;
+  line-height: 1;
+  padding: 0 0.3rem;
+}
+
+.workspace-switcher {
+  position: relative;
+  margin: 0 0.72rem 0.4rem;
+}
+
+.workspace-select {
+  width: 100%;
+  padding: 0.5rem 2rem 0.5rem 0.7rem;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  font-size: 0.82rem;
+  font-weight: 600;
+  appearance: none;
+  cursor: pointer;
+}
+
+.workspace-select-chevron {
+  position: absolute;
+  top: 50%;
+  right: 0.7rem;
+  transform: translateY(-50%);
+  color: var(--text-tertiary);
+  pointer-events: none;
+}
+
+.workspace-active-note {
+  margin: 0 0.72rem 0.6rem;
+  color: var(--text-tertiary);
+  font-size: 0.68rem;
+}
+
 .nav-spacer {
   flex: 1;
 }
@@ -607,11 +668,26 @@ h3 {
   font-weight: 700;
 }
 
+.sidebar-account-text {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 0.05rem;
+}
+
 .sidebar-account-email {
   overflow: hidden;
   color: var(--text-secondary);
   font-size: 0.76rem;
   font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sidebar-account-username {
+  overflow: hidden;
+  color: var(--text-tertiary);
+  font-size: 0.68rem;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -1265,6 +1341,7 @@ h3 {
 
 .task-item {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 0.68rem;
   padding: 0.68rem 0.78rem;
@@ -1274,6 +1351,23 @@ h3 {
   cursor: grab;
   user-select: none;
   transition: background-color var(--transition-fast), border-color var(--transition-fast), opacity var(--transition-fast);
+}
+
+.task-notes {
+  flex: 1 1 100%;
+  margin-top: 0.3rem;
+  padding-top: 0.6rem;
+  border-top: 1px dashed var(--border-subtle);
+  cursor: auto;
+  user-select: text;
+}
+
+.task-notes .textarea {
+  font-size: 0.82rem;
+}
+
+.has-notes {
+  color: var(--color-primary-light);
 }
 
 .task-item:hover {
@@ -1797,6 +1891,21 @@ h3 {
   font-weight: 650;
 }
 
+.username-field {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.username-field .input {
+  flex: 1;
+}
+
+.username-at {
+  color: var(--text-tertiary);
+  font-weight: 650;
+}
+
 .settings-actions {
   display: flex;
   align-items: flex-start;
@@ -2199,6 +2308,80 @@ h3 {
   height: 330px;
   margin-top: 1.2rem;
   border: 1px solid var(--border-subtle);
+}
+
+/* ── Team ── */
+
+.team-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 0.85rem;
+}
+
+.team-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1.1rem 1.2rem;
+}
+
+.team-card.active {
+  border-color: var(--color-primary);
+  box-shadow: var(--shadow-glow-primary);
+}
+
+.team-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.team-card-name {
+  color: var(--text-primary);
+  font-weight: 650;
+  font-size: 0.95rem;
+}
+
+.team-card-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.invite-list,
+.member-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.invite-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.65rem 0.85rem;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface-raised);
+  font-size: 0.85rem;
+}
+
+.member-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.5rem 0.6rem;
+  border-radius: var(--radius-md);
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.member-row:hover {
+  background: var(--bg-surface-hover);
 }
 
 @media (max-width: 1040px) {

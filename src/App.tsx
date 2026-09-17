@@ -20,6 +20,7 @@ const CalendarView = lazy(() => import('./components/CalendarView'));
 const Analytics = lazy(() => import('./components/Analytics'));
 const AIDecompose = lazy(() => import('./components/AIDecompose'));
 const Settings = lazy(() => import('./components/Settings'));
+const Team = lazy(() => import('./components/Team'));
 
 function RouteFallback() {
   return (
@@ -49,6 +50,7 @@ function AppShell() {
             <Route path="calendar" element={<CalendarView />} />
             <Route path="analytics" element={<Analytics />} />
             <Route path="ai-decompose" element={<AIDecompose />} />
+            <Route path="team" element={<Team />} />
             <Route path="settings" element={<Settings />} />
           </Routes>
         </Suspense>

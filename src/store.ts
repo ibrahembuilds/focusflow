@@ -11,6 +11,16 @@ import {
   getPendingTaskWrites,
   setSyncUser,
   subscribeSyncStatus,
+  fetchProfile,
+  updateProfileFields,
+  fetchMyTeams,
+  createTeamRemote,
+  deleteTeamRemote,
+  leaveTeamRemote,
+  fetchTeamMembersRemote,
+  inviteToTeamRemote,
+  fetchMyInvitesRemote,
+  respondToInviteRemote,
 } from './lib/sync';
 
 export interface AuthUser {
@@ -28,6 +38,50 @@ export interface Task {
   projectId?: string;
   dueDate?: string;
   priority?: 'low' | 'medium' | 'high';
+  /** Freeform notes for this task. */
+  notes?: string;
+  /** Class/subject tag, e.g. "Math" — mainly useful for student workspaces. */
+  subject?: string;
+  /** Set when this task lives in a shared team workspace rather than personal. */
+  teamId?: string;
+  /**
+   * The account that created this task — distinct from "whoever is currently
+   * signed in", because a teammate can edit a shared task they didn't create.
+   * Missing on tasks cached before this field existed; treated as "the
+   * current user" at write time in that case.
+   */
+  ownerId?: string;
+}
+
+export interface Profile {
+  id: string;
+  username: string;
+  fullName?: string;
+}
+
+export type TeamRole = 'owner' | 'member';
+
+export interface Team {
+  id: string;
+  name: string;
+  createdBy: string;
+  role: TeamRole;
+}
+
+export interface TeamMember {
+  userId: string;
+  username: string;
+  fullName?: string;
+  role: TeamRole;
+}
+
+export interface TeamInvite {
+  id: string;
+  teamId: string;
+  teamName: string;
+  invitedBy: string;
+  invitedByUsername: string;
+  status: 'pending' | 'accepted' | 'declined';
 }
 
 export interface TimerSession {
@@ -69,12 +123,33 @@ export interface FocusFlowState {
 
   // Tasks
   tasks: Task[];
-  addTask: (text: string, priority?: Task['priority']) => void;
-  addTasks: (items: { text: string; priority?: Task['priority'] }[]) => void;
+  addTask: (text: string, priority?: Task['priority'], subject?: string) => void;
+  addTasks: (items: { text: string; priority?: Task['priority']; subject?: string }[]) => void;
   toggleTask: (id: string) => void;
   deleteTask: (id: string) => void;
   reorderTasks: (fromIndex: number, toIndex: number) => void;
   incrementTaskSession: (id: string) => void;
+  updateTaskNotes: (id: string, notes: string) => void;
+
+  // Profile
+  profile: Profile | null;
+  updateUsername: (username: string) => Promise<string | null>;
+
+  // Teams (shared workspaces)
+  teams: Team[];
+  /** null = the personal workspace; otherwise the id of the active team. */
+  activeTeamId: string | null;
+  setActiveTeamId: (teamId: string | null) => void;
+  teamMembers: TeamMember[];
+  isLoadingTeamMembers: boolean;
+  pendingInvites: TeamInvite[];
+  refreshTeams: () => Promise<void>;
+  createTeam: (name: string) => Promise<string | null>;
+  deleteTeam: (teamId: string) => Promise<string | null>;
+  leaveTeam: (teamId: string) => Promise<string | null>;
+  fetchTeamMembers: (teamId: string) => Promise<void>;
+  inviteToTeam: (teamId: string, username: string) => Promise<string | null>;
+  respondToInvite: (invite: TeamInvite, accept: boolean) => Promise<string | null>;
 
   // Timer
   timerRunning: boolean;
@@ -95,8 +170,10 @@ export interface FocusFlowState {
   // AI Decompose
   isDecomposing: boolean;
   decomposeResult: DecomposedTask[];
+  /** The class/subject typed alongside the goal, applied to every subtask added from it. */
+  decomposeSubject: string;
   setDecomposing: (v: boolean) => void;
-  setDecomposeResult: (results: DecomposedTask[]) => void;
+  setDecomposeResult: (results: DecomposedTask[], subject?: string) => void;
   clearDecompose: () => void;
 
 }
@@ -140,7 +217,16 @@ export const useStore = create<FocusFlowState>()(
       hydrateForUser: async (user) => {
         setSyncUser(user?.id ?? null);
         if (!user) {
-          set({ userId: null, tasks: [], sessions: [] });
+          set({
+            userId: null,
+            tasks: [],
+            sessions: [],
+            profile: null,
+            teams: [],
+            activeTeamId: null,
+            teamMembers: [],
+            pendingInvites: [],
+          });
           return;
         }
         // Preferences and onboarding state are tied to the account, not the
@@ -155,6 +241,11 @@ export const useStore = create<FocusFlowState>()(
         if (previousUserId && previousUserId !== user.id) {
           patch.tasks = [];
           patch.sessions = [];
+          patch.profile = null;
+          patch.teams = [];
+          patch.activeTeamId = null;
+          patch.teamMembers = [];
+          patch.pendingInvites = [];
         }
         if (typeof metadata.hasCompletedOnboarding === 'boolean') {
           patch.hasCompletedOnboarding = metadata.hasCompletedOnboarding;
@@ -177,9 +268,10 @@ export const useStore = create<FocusFlowState>()(
         // back, so a task created offline isn't erased by the fetch below.
         await flushPendingWrites(user.id);
 
-        const [tasks, sessions] = await Promise.all([
-          fetchUserTasks(user.id),
+        const [tasks, sessions, profile] = await Promise.all([
+          fetchUserTasks(),
           fetchUserSessions(user.id),
+          fetchProfile(user.id),
         ]);
         // Bail if the user switched again while this fetch was in flight.
         if (get().userId !== user.id) return;
@@ -188,21 +280,36 @@ export const useStore = create<FocusFlowState>()(
         set({
           tasks: tasks ? mergePendingTasks(tasks, user.id) : get().tasks,
           sessions: sessions ?? get().sessions,
+          profile: profile ?? get().profile,
           isSyncing: false,
         });
+
+        void get().refreshTeams();
       },
 
       // ── Tasks ──
       tasks: [],
 
-      addTask: (text, priority = 'medium') => {
-        const newTask: Task = { id: uid(), text, completed: false, sessions: 0, createdAt: today(), priority };
-        set((s) => ({ tasks: [newTask, ...s.tasks] }));
+      addTask: (text, priority = 'medium', subject) => {
         const userId = get().userId;
+        const newTask: Task = {
+          id: uid(),
+          text,
+          completed: false,
+          sessions: 0,
+          createdAt: today(),
+          priority,
+          subject,
+          teamId: get().activeTeamId ?? undefined,
+          ownerId: userId ?? undefined,
+        };
+        set((s) => ({ tasks: [newTask, ...s.tasks] }));
         if (userId) void saveTaskRemote(userId, newTask);
       },
 
       addTasks: (items) => {
+        const userId = get().userId;
+        const teamId = get().activeTeamId ?? undefined;
         const newTasks: Task[] = items.map((item) => ({
           id: uid(),
           text: item.text,
@@ -210,9 +317,11 @@ export const useStore = create<FocusFlowState>()(
           sessions: 0,
           createdAt: today(),
           priority: item.priority ?? 'medium',
+          subject: item.subject,
+          teamId,
+          ownerId: userId ?? undefined,
         }));
         set((s) => ({ tasks: [...newTasks, ...s.tasks] }));
-        const userId = get().userId;
         if (userId) newTasks.forEach((t) => void saveTaskRemote(userId, t));
       },
 
@@ -236,11 +345,28 @@ export const useStore = create<FocusFlowState>()(
 
       reorderTasks: (fromIndex, toIndex) =>
         set((s) => {
-          const todaysTasks = s.tasks.filter((t) => t.createdAt === today());
-          const others = s.tasks.filter((t) => t.createdAt !== today());
-          const [moved] = todaysTasks.splice(fromIndex, 1);
-          todaysTasks.splice(toIndex, 0, moved);
-          return { tasks: [...todaysTasks, ...others] };
+          // Must mirror exactly what TaskList's drag list contains — today,
+          // the active workspace, and not yet completed — or fromIndex/
+          // toIndex (computed against that list) reorder the wrong task.
+          const reorderable = s.tasks.filter(
+            (t) =>
+              t.createdAt === today() &&
+              !t.completed &&
+              (s.activeTeamId ? t.teamId === s.activeTeamId : !t.teamId)
+          );
+          if (fromIndex < 0 || fromIndex >= reorderable.length || toIndex < 0 || toIndex >= reorderable.length) {
+            return {};
+          }
+          const [moved] = reorderable.splice(fromIndex, 1);
+          reorderable.splice(toIndex, 0, moved);
+
+          // Walk the full list in its existing order, substituting each
+          // reordered task's new neighbor in turn — every other task (a
+          // different day, workspace, or already completed) keeps its slot.
+          const reorderedIds = new Set(reorderable.map((t) => t.id));
+          let cursor = 0;
+          const tasks = s.tasks.map((t) => (reorderedIds.has(t.id) ? reorderable[cursor++] : t));
+          return { tasks };
         }),
 
       incrementTaskSession: (id) => {
@@ -248,6 +374,15 @@ export const useStore = create<FocusFlowState>()(
           tasks: s.tasks.map((t) =>
             t.id === id ? { ...t, sessions: t.sessions + 1 } : t
           ),
+        }));
+        const userId = get().userId;
+        const updated = get().tasks.find((t) => t.id === id);
+        if (userId && updated) void saveTaskRemote(userId, updated);
+      },
+
+      updateTaskNotes: (id, notes) => {
+        set((s) => ({
+          tasks: s.tasks.map((t) => (t.id === id ? { ...t, notes } : t)),
         }));
         const userId = get().userId;
         const updated = get().tasks.find((t) => t.id === id);
@@ -284,9 +419,114 @@ export const useStore = create<FocusFlowState>()(
       // ── AI ──
       isDecomposing: false,
       decomposeResult: [],
+      decomposeSubject: '',
       setDecomposing: (v) => set({ isDecomposing: v }),
-      setDecomposeResult: (results) => set({ decomposeResult: results }),
-      clearDecompose: () => set({ decomposeResult: [], isDecomposing: false }),
+      setDecomposeResult: (results, subject = '') => set({ decomposeResult: results, decomposeSubject: subject }),
+      clearDecompose: () => set({ decomposeResult: [], decomposeSubject: '', isDecomposing: false }),
+
+      // ── Profile ──
+      profile: null,
+      updateUsername: async (username) => {
+        const userId = get().userId;
+        if (!userId) return 'You need to be signed in.';
+        const trimmed = username.trim().toLowerCase();
+        if (!/^[a-z0-9_]{3,20}$/.test(trimmed)) {
+          return 'Usernames are 3-20 characters: lowercase letters, numbers, and underscores.';
+        }
+        const error = await updateProfileFields(userId, { username: trimmed });
+        if (!error) {
+          set((s) => ({ profile: s.profile ? { ...s.profile, username: trimmed } : s.profile }));
+        }
+        return error;
+      },
+
+      // ── Teams (shared workspaces) ──
+      teams: [],
+      activeTeamId: null,
+      setActiveTeamId: (teamId) => set({ activeTeamId: teamId, teamMembers: [] }),
+      teamMembers: [],
+      isLoadingTeamMembers: false,
+      pendingInvites: [],
+
+      refreshTeams: async () => {
+        const userId = get().userId;
+        if (!userId) return;
+        const [teams, invites] = await Promise.all([fetchMyTeams(userId), fetchMyInvitesRemote(userId)]);
+        if (get().userId !== userId) return;
+        set({
+          teams: teams ?? get().teams,
+          pendingInvites: invites ?? get().pendingInvites,
+          // A team the user no longer belongs to (left, removed, deleted)
+          // shouldn't stay selected as the active workspace.
+          activeTeamId:
+            teams && get().activeTeamId && !teams.some((t) => t.id === get().activeTeamId)
+              ? null
+              : get().activeTeamId,
+        });
+      },
+
+      createTeam: async (name) => {
+        const userId = get().userId;
+        if (!userId) return 'You need to be signed in.';
+        const trimmed = name.trim();
+        if (!trimmed) return 'Give the team a name.';
+        const { team, error } = await createTeamRemote(userId, trimmed);
+        if (team) {
+          set((s) => ({ teams: [...s.teams, team], activeTeamId: team.id, teamMembers: [] }));
+        }
+        return error;
+      },
+
+      deleteTeam: async (teamId) => {
+        const error = await deleteTeamRemote(teamId);
+        if (!error) {
+          set((s) => ({
+            teams: s.teams.filter((t) => t.id !== teamId),
+            activeTeamId: s.activeTeamId === teamId ? null : s.activeTeamId,
+          }));
+        }
+        return error;
+      },
+
+      leaveTeam: async (teamId) => {
+        const userId = get().userId;
+        if (!userId) return 'You need to be signed in.';
+        const error = await leaveTeamRemote(teamId, userId);
+        if (!error) {
+          set((s) => ({
+            teams: s.teams.filter((t) => t.id !== teamId),
+            activeTeamId: s.activeTeamId === teamId ? null : s.activeTeamId,
+          }));
+        }
+        return error;
+      },
+
+      fetchTeamMembers: async (teamId) => {
+        set({ isLoadingTeamMembers: true });
+        const members = await fetchTeamMembersRemote(teamId);
+        // Bail if the user switched teams while this fetch was in flight.
+        if (get().activeTeamId !== teamId) return;
+        set({ teamMembers: members ?? [], isLoadingTeamMembers: false });
+      },
+
+      inviteToTeam: async (teamId, username) => {
+        const userId = get().userId;
+        if (!userId) return 'You need to be signed in.';
+        const trimmed = username.trim().toLowerCase().replace(/^@/, '');
+        if (!trimmed) return 'Enter a username to invite.';
+        return inviteToTeamRemote(teamId, userId, trimmed);
+      },
+
+      respondToInvite: async (invite, accept) => {
+        const userId = get().userId;
+        if (!userId) return 'You need to be signed in.';
+        const error = await respondToInviteRemote(invite.id, invite.teamId, userId, accept);
+        if (!error) {
+          set((s) => ({ pendingInvites: s.pendingInvites.filter((i) => i.id !== invite.id) }));
+          if (accept) void get().refreshTeams();
+        }
+        return error;
+      },
 
     }),
     {
@@ -303,6 +543,10 @@ export const useStore = create<FocusFlowState>()(
         accentColor: state.accentColor,
         sidebarCollapsed: state.sidebarCollapsed,
         hasCompletedOnboarding: state.hasCompletedOnboarding,
+        // Remember which workspace was active, but not the teams/members/
+        // invites lists themselves — those always come fresh from the
+        // server so a removal or rename elsewhere is never stale here.
+        activeTeamId: state.activeTeamId,
       }),
     }
   )
@@ -333,6 +577,12 @@ function mergePendingTasks(serverTasks: Task[], userId: string): Task[] {
 }
 
 // ── Derived helpers (not stored) ──
+
+/** Personal tasks (no team) when `activeTeamId` is null, otherwise that team's tasks only. */
+export function getTasksForWorkspace(tasks: Task[], activeTeamId: string | null) {
+  return tasks.filter((t) => (activeTeamId ? t.teamId === activeTeamId : !t.teamId));
+}
+
 export function getTodaysTasks(tasks: Task[]) {
   return tasks.filter((t) => t.createdAt === today());
 }

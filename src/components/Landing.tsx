@@ -9,6 +9,8 @@ import {
   Flame,
   Check,
   Menu,
+  Users,
+  BookOpen,
 } from 'lucide-react';
 import { useState } from 'react';
 import { useAuth } from '../lib/auth';
@@ -32,6 +34,16 @@ const FAQS = [
   {
     question: 'Does FocusFlow work on mobile?',
     answer: 'Yes. FocusFlow is fully responsive and works in any modern mobile or desktop browser.',
+  },
+  {
+    question: 'Is FocusFlow good for students?',
+    answer:
+      'Yes. Tag tasks by class or subject, track assignment due dates on the calendar, and use AI to break a big assignment into steps.',
+  },
+  {
+    question: 'Can I work with classmates or a team?',
+    answer:
+      'Yes. Create a team, invite people by username, and everyone sees and checks off the same shared task list — separate from your personal tasks.',
   },
 ];
 
@@ -75,6 +87,16 @@ const FEATURES = [
     icon: Flame,
     title: 'Streaks that motivate',
     description: 'Build a rhythm you can see — one focused day at a time.',
+  },
+  {
+    icon: BookOpen,
+    title: 'Organize by class or subject',
+    description: 'Tag tasks by class — great for juggling assignments across a full course load.',
+  },
+  {
+    icon: Users,
+    title: 'Study or work as a team',
+    description: 'Create a shared workspace, invite people by username, and tackle one task list together.',
   },
 ];
 
@@ -170,7 +192,8 @@ export default function Landing() {
           </h1>
           <p className="landing-hero-subtitle">
             FocusFlow pairs a clear daily task list with a focus timer, AI-powered planning, and
-            progress you can actually see. No noise, no clutter — just steady work.
+            progress you can actually see — great for students juggling classes or a team sharing
+            the work. No noise, no clutter — just steady work.
           </p>
           <div className="landing-hero-actions">
             <Link to={user ? '/app' : '/signup'} className="btn btn-primary btn-lg">

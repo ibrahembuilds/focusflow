@@ -15,8 +15,19 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { GripVertical, Trash2, Play, Plus, Sparkles, Check, Target, CloudOff, RefreshCw } from 'lucide-react';
-import { useStore, getTodaysTasks } from '../store';
+import {
+  GripVertical,
+  Trash2,
+  Play,
+  Plus,
+  Sparkles,
+  Check,
+  Target,
+  CloudOff,
+  RefreshCw,
+  NotebookPen,
+} from 'lucide-react';
+import { useStore, getTodaysTasks, getTasksForWorkspace } from '../store';
 import type { Task } from '../store';
 import { Link, useNavigate } from 'react-router-dom';
 
@@ -26,11 +37,13 @@ function SortableTask({
   onToggle,
   onDelete,
   onStart,
+  onUpdateNotes,
 }: {
   task: Task;
   onToggle: (id: string) => void;
   onDelete: (id: string) => void;
   onStart: (task: Task) => void;
+  onUpdateNotes: (id: string, notes: string) => void;
 }) {
   const {
     attributes,
@@ -45,6 +58,13 @@ function SortableTask({
     transform: CSS.Transform.toString(transform),
     transition,
   };
+
+  const [notesOpen, setNotesOpen] = useState(false);
+  const [notesDraft, setNotesDraft] = useState(task.notes ?? '');
+
+  function handleNotesBlur() {
+    if (notesDraft !== (task.notes ?? '')) onUpdateNotes(task.id, notesDraft);
+  }
 
   return (
     <div
@@ -68,6 +88,7 @@ function SortableTask({
       <span className="task-text">{task.text}</span>
 
       <div className="task-meta">
+        {task.subject && <span className="badge badge-subject">{task.subject}</span>}
         {task.priority && (
           <span
             className={`badge ${
@@ -82,6 +103,15 @@ function SortableTask({
           </span>
         )}
         <span className="task-sessions">{task.sessions} sessions</span>
+
+        <button
+          className={`btn btn-ghost btn-sm btn-icon${task.notes ? ' has-notes' : ''}`}
+          onClick={() => setNotesOpen((v) => !v)}
+          title={task.notes ? 'View/edit notes' : 'Add notes'}
+          aria-expanded={notesOpen}
+        >
+          <NotebookPen size={14} />
+        </button>
 
         {!task.completed && (
           <button
@@ -101,6 +131,20 @@ function SortableTask({
           <Trash2 size={14} />
         </button>
       </div>
+
+      {notesOpen && (
+        <div className="task-notes">
+          <textarea
+            className="input textarea"
+            placeholder="Add notes for this task…"
+            value={notesDraft}
+            onChange={(e) => setNotesDraft(e.target.value)}
+            onBlur={handleNotesBlur}
+            rows={3}
+            autoFocus
+          />
+        </div>
+      )}
     </div>
   );
 }
@@ -114,24 +158,31 @@ export default function TaskList() {
     toggleTask,
     deleteTask,
     reorderTasks,
+    updateTaskNotes,
     setActiveTaskId,
     setTimerMinutes,
     decomposeResult,
+    decomposeSubject,
     clearDecompose,
     pendingWrites,
     retrySync,
+    activeTeamId,
+    teams,
   } = useStore();
   const navigate = useNavigate();
 
   const [newTaskText, setNewTaskText] = useState('');
   const [priority, setPriority] = useState<Task['priority']>('medium');
+  const [subject, setSubject] = useState('');
   const [selectedIndices, setSelectedIndices] = useState<Set<number>>(new Set());
 
   useEffect(() => {
     setSelectedIndices(new Set(decomposeResult.map((_, i) => i)));
   }, [decomposeResult]);
 
-  const todaysTasks = getTodaysTasks(tasks);
+  const activeTeamName = teams.find((t) => t.id === activeTeamId)?.name;
+  const workspaceTasks = useMemo(() => getTasksForWorkspace(tasks, activeTeamId), [tasks, activeTeamId]);
+  const todaysTasks = getTodaysTasks(workspaceTasks);
   const active = todaysTasks.filter((t) => !t.completed);
   const completed = todaysTasks.filter((t) => t.completed);
 
@@ -157,7 +208,7 @@ export default function TaskList() {
   function handleAdd() {
     const text = newTaskText.trim();
     if (!text) return;
-    addTask(text, priority);
+    addTask(text, priority, subject.trim() || undefined);
     setNewTaskText('');
   }
 
@@ -183,7 +234,7 @@ export default function TaskList() {
   function handleAddDecomposed() {
     const selected = decomposeResult.filter((_, i) => selectedIndices.has(i));
     if (selected.length > 0) {
-      addTasks(selected);
+      addTasks(selected.map((task) => ({ ...task, subject: decomposeSubject || undefined })));
       clearDecompose();
     }
   }
@@ -192,9 +243,10 @@ export default function TaskList() {
     <div className="animate-in">
       <div className="page-header">
         <div>
-          <h1 className="page-title">Tasks</h1>
+          <h1 className="page-title">Tasks{activeTeamName ? ` · ${activeTeamName}` : ''}</h1>
           <p className="page-subtitle">
             {active.length} active, {completed.length} completed today
+            {activeTeamName ? ` in ${activeTeamName}` : ''}
           </p>
         </div>
         <Link to="/app/ai-decompose" className="btn btn-primary">
@@ -301,6 +353,15 @@ export default function TaskList() {
           onChange={(e) => setNewTaskText(e.target.value)}
           onKeyDown={handleKeyDown}
         />
+        <input
+          className="input"
+          placeholder="Subject"
+          value={subject}
+          onChange={(e) => setSubject(e.target.value)}
+          onKeyDown={handleKeyDown}
+          maxLength={40}
+          style={{ maxWidth: '140px' }}
+        />
         <select
           className="btn btn-ghost btn-sm"
           value={priority}
@@ -341,6 +402,7 @@ export default function TaskList() {
                   onToggle={toggleTask}
                   onDelete={deleteTask}
                   onStart={handleStartFocus}
+                  onUpdateNotes={updateTaskNotes}
                 />
               ))}
             </div>
@@ -373,6 +435,7 @@ export default function TaskList() {
                 </button>
                 <span className="task-text">{task.text}</span>
                 <div className="task-meta">
+                  {task.subject && <span className="badge badge-subject">{task.subject}</span>}
                   <span className="task-sessions">{task.sessions} sessions</span>
                   <button className="task-delete" onClick={() => deleteTask(task.id)}>
                     <Trash2 size={14} />
