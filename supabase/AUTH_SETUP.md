@@ -48,7 +48,10 @@ This is a project setting, not something the app code turns on or off.
 
 **Optional:** Auth Providers → Email also has an **Email Templates** page if
 you want to customize the confirmation email's subject/wording — not
-required, the default works.
+required, the default works. A branded one is ready to use:
+`supabase/email-templates/confirm-signup.html` — open it, copy everything
+inside `<body>...</body>` into the **Confirm signup** template's body field,
+and set its subject to "Confirm your FocusFlow account".
 
 ## 2. Google sign-in
 
