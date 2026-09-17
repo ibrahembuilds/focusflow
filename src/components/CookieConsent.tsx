@@ -12,12 +12,14 @@ export default function CookieConsent() {
     // uses; sharing it would make "no dialogs open" checks see this instead.
     <div className="cookie-consent" role="region" aria-label="Cookie preferences">
       <div className="cookie-consent-inner">
-        <Cookie size={20} className="cookie-consent-icon" aria-hidden="true" />
-        <p>
-          Signing in needs your browser's local storage to work — that part isn't optional. Anonymous
-          site analytics is: we only turn it on if you say yes.{' '}
-          <Link to="/privacy">Privacy Policy</Link>
-        </p>
+        <div className="cookie-consent-copy">
+          <Cookie size={20} className="cookie-consent-icon" aria-hidden="true" />
+          <p>
+            Signing in needs your browser's local storage to work — that part isn't optional. Anonymous
+            site analytics is: we only turn it on if you say yes.{' '}
+            <Link to="/privacy">Privacy Policy</Link>
+          </p>
+        </div>
         <div className="cookie-consent-actions">
           <button type="button" className="btn btn-ghost btn-sm" onClick={() => setConsent('declined')}>
             Decline analytics

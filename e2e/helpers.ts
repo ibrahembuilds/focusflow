@@ -59,6 +59,7 @@ export const PASSWORD = 'focusflow-test-pw';
 
 export async function signUp(page: Page, email: string, password = PASSWORD) {
   await page.goto('/signup');
+  await dismissCookieConsent(page);
   await page.getByLabel('Email').fill(email);
   await page.getByLabel('Password').fill(password);
   await page.getByRole('button', { name: 'Create account' }).click();
@@ -68,11 +69,33 @@ export async function signUp(page: Page, email: string, password = PASSWORD) {
 
 export async function logIn(page: Page, email: string, password = PASSWORD) {
   await page.goto('/login');
+  await dismissCookieConsent(page);
   await page.getByLabel('Email').fill(email);
   await page.getByLabel('Password').fill(password);
   await page.getByRole('button', { name: 'Log in' }).click();
   await page.waitForURL('**/app');
   await dismissOnboarding(page);
+}
+
+/**
+ * The cookie banner is global (rendered outside the route switch, so it can
+ * appear on the auth pages too, before there's even an app shell to wait
+ * for) and fixed to a screen corner — close enough to real content on a
+ * default-size viewport that leaving it up risks an unrelated click landing
+ * on it instead. Resolving it here, right after the pages that can show it
+ * first, means no test has to think about it to get a clean click.
+ */
+export async function dismissCookieConsent(page: Page) {
+  const banner = page.locator('.cookie-consent');
+  const appeared = await banner
+    .waitFor({ state: 'visible', timeout: 2000 })
+    .then(() => true)
+    .catch(() => false);
+
+  if (appeared) {
+    await banner.getByRole('button', { name: 'Accept' }).click();
+  }
+  await expect(banner).toHaveCount(0);
 }
 
 export async function logOut(page: Page) {

@@ -101,17 +101,28 @@ test.describe('cookie consent', () => {
     await page.waitForURL('**/privacy');
     await expect(page.getByRole('heading', { name: 'Privacy Policy' })).toBeVisible();
     // It should actually describe what the app does, not be a placeholder.
-    await expect(page.getByText(/OpenAI/)).toBeVisible();
-    await expect(page.getByText(/Supabase/)).toBeVisible();
+    // Exact match: both names also appear inside plain sentences elsewhere on
+    // the page (e.g. "sent to OpenAI's API"), which would otherwise make
+    // these resolve to more than one element.
+    await expect(page.getByText('OpenAI', { exact: true })).toBeVisible();
+    await expect(page.getByText('Supabase', { exact: true })).toBeVisible();
   });
 
   test('is reachable from the landing footer and the signup page', async ({ page }) => {
     await page.goto('/');
-    await page.getByRole('link', { name: 'Privacy Policy' }).click();
+    // Scoped to the footer landmark — the still-open cookie banner has its
+    // own "Privacy Policy" link too, and this test is specifically about the
+    // footer's.
+    await page.getByRole('contentinfo').getByRole('link', { name: 'Privacy Policy' }).click();
     await page.waitForURL('**/privacy');
     await expect(page.getByRole('heading', { name: 'Privacy Policy' })).toBeVisible();
 
     await page.goto('/signup');
-    await expect(page.getByRole('link', { name: 'Privacy Policy' })).toHaveAttribute('href', '/privacy');
+    // Scoped to the signup form's own legal line — the cookie banner (still
+    // undismissed here too) carries a second "Privacy Policy" link.
+    await expect(page.locator('.auth-legal').getByRole('link', { name: 'Privacy Policy' })).toHaveAttribute(
+      'href',
+      '/privacy',
+    );
   });
 });

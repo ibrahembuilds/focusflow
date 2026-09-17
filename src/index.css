@@ -4343,14 +4343,17 @@ a.sidebar-account-info:hover {
 
 /* ── Cookie consent banner ────────────────────────────────────────────── */
 
+/* A corner card, not a full-width bar — it has one small job (get a yes or
+   no on analytics) and shouldn't sit on top of whatever's at the bottom of
+   whichever page it happens to load on. */
 .cookie-consent {
   position: fixed;
-  left: 1rem;
   right: 1rem;
   bottom: 1rem;
+  left: 1rem;
   z-index: 80;
-  max-width: 640px;
-  margin: 0 auto;
+  max-width: 360px;
+  margin-left: auto;
   border: 1px solid var(--border-default);
   border-radius: var(--radius-lg);
   background: var(--bg-surface-raised);
@@ -4371,23 +4374,27 @@ a.sidebar-account-info:hover {
 
 .cookie-consent-inner {
   display: flex;
-  align-items: flex-start;
+  flex-direction: column;
   gap: 0.75rem;
-  padding: 1rem 1.1rem;
+  padding: 0.95rem 1rem;
+}
+
+.cookie-consent-copy {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
 }
 
 .cookie-consent-icon {
   flex-shrink: 0;
-  margin-top: 0.15rem;
+  margin-top: 0.1rem;
   color: var(--color-primary);
 }
 
 .cookie-consent-inner p {
-  flex: 1;
-  min-width: 180px;
   margin: 0;
   color: var(--text-secondary);
-  font-size: 0.82rem;
+  font-size: 0.8rem;
   line-height: 1.5;
 }
 
@@ -4398,21 +4405,19 @@ a.sidebar-account-info:hover {
 
 .cookie-consent-actions {
   display: flex;
-  flex-shrink: 0;
+  width: 100%;
   gap: 0.5rem;
 }
 
-@media (max-width: 560px) {
-  .cookie-consent-inner {
-    flex-direction: column;
-  }
+.cookie-consent-actions .btn {
+  flex: 1;
+}
 
-  .cookie-consent-actions {
-    width: 100%;
-  }
-
-  .cookie-consent-actions .btn {
-    flex: 1;
+@media (max-width: 420px) {
+  .cookie-consent {
+    left: 0.75rem;
+    right: 0.75rem;
+    max-width: none;
   }
 }
 
