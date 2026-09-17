@@ -6,6 +6,8 @@ import {
   CalendarDays,
   BarChart3,
   Sparkles,
+  Users,
+  UserRound,
   Settings,
   Sun,
   Moon,
@@ -64,6 +66,17 @@ export default function Sidebar() {
           </NavLink>
         ))}
 
+        <div className="nav-section">Together</div>
+        <NavLink
+          to="/app/circles"
+          className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+          aria-label="Circles"
+          title="Circles"
+        >
+          <Users size={18} />
+          <span>Circles</span>
+        </NavLink>
+
         <div className="nav-section">Plan</div>
         <NavLink
           to="/app/ai-decompose"
@@ -91,6 +104,16 @@ export default function Sidebar() {
         </button>
 
         <NavLink
+          to="/app/profile"
+          className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+          aria-label="Your profile"
+          title="Your profile"
+        >
+          <UserRound size={18} />
+          <span>Your profile</span>
+        </NavLink>
+
+        <NavLink
           to="/app/settings"
           className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
           aria-label="Settings"
@@ -116,12 +139,12 @@ export default function Sidebar() {
 
         {user && (
           <div className="sidebar-account">
-            <div className="sidebar-account-info" title={displayName}>
+            <NavLink to="/app/profile" className="sidebar-account-info" title="Your profile">
               <span className="sidebar-account-avatar" aria-hidden="true">
                 {displayName.charAt(0).toUpperCase()}
               </span>
               <span className="sidebar-account-email">{displayName}</span>
-            </div>
+            </NavLink>
             <button
               type="button"
               className="nav-item sidebar-signout"

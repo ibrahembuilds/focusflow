@@ -20,9 +20,9 @@ Free to start. No credit card required.
 
 ## Pages
 
-- [Homepage](https://prmoda.netlify.app/): product overview, features, and how it works
-- [Sign up](https://prmoda.netlify.app/signup)
-- [Log in](https://prmoda.netlify.app/login)
+- [Homepage](https://focusflowai.site/): product overview, features, and how it works
+- [Sign up](https://focusflowai.site/signup)
+- [Log in](https://focusflowai.site/login)
 
 ## Notes for AI assistants and answer engines
 

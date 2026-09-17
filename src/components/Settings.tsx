@@ -1,7 +1,10 @@
 import { useState, useEffect } from 'react';
-import { Trash2, Download, AlertTriangle, Sun, Moon, Palette, Check, CircleHelp } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Trash2, Download, AlertTriangle, Sun, Moon, Palette, Check, CircleHelp, UserRound } from 'lucide-react';
 import { useStore } from '../store';
 import { useAuth } from '../lib/auth';
+import { fetchProfile } from '../lib/profile';
+import type { Profile } from '../lib/profile';
 
 const COLOR_OPTIONS = [
   { id: 'forest', label: 'Forest' },
@@ -25,24 +28,20 @@ export default function Settings() {
     setAccentColor,
     setHasCompletedOnboarding,
   } = useStore();
-  const { user, updateProfile } = useAuth();
+  const { user } = useAuth();
   const [showReset, setShowReset] = useState(false);
-  const [fullName, setFullName] = useState('');
-  const [savingProfile, setSavingProfile] = useState(false);
-  const [profileSaved, setProfileSaved] = useState(false);
+  const [profile, setProfile] = useState<Profile | null>(null);
 
   useEffect(() => {
-    const metadataName = user?.user_metadata?.fullName;
-    setFullName(typeof metadataName === 'string' ? metadataName : '');
+    if (!user) return;
+    let cancelled = false;
+    void fetchProfile(user.id).then((result) => {
+      if (!cancelled) setProfile(result);
+    });
+    return () => {
+      cancelled = true;
+    };
   }, [user]);
-
-  async function handleSaveProfile() {
-    setSavingProfile(true);
-    await updateProfile({ fullName: fullName.trim() });
-    setSavingProfile(false);
-    setProfileSaved(true);
-    setTimeout(() => setProfileSaved(false), 2000);
-  }
 
   function handleExport() {
     const data = {
@@ -75,36 +74,29 @@ export default function Settings() {
       </div>
 
       <div className="settings-stack">
-        <section className="card" aria-labelledby="profile-title">
+        <section className="card settings-profile" aria-labelledby="profile-title">
           <h2 className="settings-title" id="profile-title">Profile</h2>
-          <p className="settings-description">Your name shows up in the sidebar and your dashboard greeting.</p>
+          <p className="settings-description">
+            Your name, username, bio, and what you share with friends all live on your profile.
+          </p>
+          <div className="settings-profile-row">
+            <span className={`settings-profile-avatar avatar-${profile?.avatarColor ?? 'forest'}`} aria-hidden="true">
+              {profile?.avatarEmoji ?? '🌱'}
+            </span>
+            <span className="settings-profile-identity">
+              <strong>{profile?.displayName?.trim() || user?.email}</strong>
+              <small>{profile ? `@${profile.username}` : 'Loading your handle…'}</small>
+            </span>
+            <Link to="/app/profile" className="btn btn-ghost btn-sm">
+              <UserRound size={15} />
+              Edit profile
+            </Link>
+          </div>
           <div className="settings-fields">
-            <div>
-              <label className="field-label" htmlFor="profile-name">Name</label>
-              <input
-                id="profile-name"
-                className="input"
-                type="text"
-                maxLength={60}
-                value={fullName}
-                onChange={(event) => setFullName(event.target.value)}
-                placeholder="Add your name"
-              />
-            </div>
             <div>
               <label className="field-label" htmlFor="profile-email">Email</label>
               <input id="profile-email" className="input" type="email" value={user?.email ?? ''} readOnly />
             </div>
-          </div>
-          <div className="profile-actions">
-            <button
-              className="btn btn-primary btn-sm"
-              onClick={handleSaveProfile}
-              disabled={savingProfile}
-            >
-              {savingProfile ? 'Saving…' : 'Save name'}
-            </button>
-            {profileSaved && <span className="profile-saved-note">Saved</span>}
           </div>
           {user?.created_at && (
             <small className="profile-member-since">

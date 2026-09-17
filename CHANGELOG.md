@@ -4,6 +4,109 @@ All notable changes to the FocusFlow productivity platform.
 
 ---
 
+## [Unreleased] — A profile fix, cookie consent, a real privacy policy, a caught-up landing page, and a sturdier AI
+
+### 🐛 Fixed
+- The name you give during onboarding now actually reaches your shareable profile card, not just the sidebar greeting. Before this, onboarding wrote your name to the auth account's own metadata only — the newer profile card reads a separate column that nothing was updating, so a named account could still show up to friends as a bare `@handle`.
+
+### 🍪 Cookie consent that actually gates something
+- A real banner, not a decorative one: Vercel Analytics does not load at all until you accept it. Declining costs you nothing — the app works identically either way.
+- The choice is remembered and never asked twice.
+
+### 📄 A real Privacy Policy
+- `/privacy` — written to match what this app actually does (Supabase for auth/data/photos, OpenAI for the AI breakdown feature, Google only if you use that sign-in, Vercel only with consent), not a generic template. Linked from the landing footer, the signup page, and the cookie banner.
+- Honest about a real gap: there's no self-service "delete my account" button yet, so the policy says to email instead of pretending otherwise.
+
+### 🏠 The landing page catches up
+- Circles, shareable profiles, and Google sign-in are now actually mentioned on the marketing page — they shipped over the last few updates and the page never once referenced them.
+- Two new FAQ entries (also feeds the page's structured data for search).
+
+### 🧠 A sturdier AI Breakdown
+- Both AI endpoints (goal → subtasks, goal → clarifying questions) now use OpenAI's strict JSON-Schema structured outputs instead of loose JSON-object mode. OpenAI itself refuses to return anything off-shape now, which retires the regex-based fallback parser that used to guess at malformed responses.
+- One automatic retry on a dropped connection or an OpenAI 5xx, before surfacing an error — the two failure modes a second attempt can actually fix. A 4xx (bad key, bad request) still fails immediately, since retrying that changes nothing.
+- Applied identically to both the Vercel and Netlify copies of each endpoint.
+
+### 🧪 Tests
+- New coverage for the onboarding name fix (walks the real flow instead of skipping it, checks both the sidebar and the profile card) and cookie consent (shows once, both choices persist, links to a real policy page).
+- Caught a real bug before it shipped: the cookie banner was given `role="dialog"`, which collided with the onboarding modal's own dialog role and broke "is anything still open" checks across roughly 35 existing tests. Fixed to `role="region"` — a non-modal banner isn't a dialog.
+
+---
+
+## [Unreleased] — Google sign-in, real photos, and private groups
+
+### 🔑 Sign in with Google
+- A "Continue with Google" / "Sign up with Google" button on both auth pages
+- A new Google account is seeded automatically with the name and photo Google provides — nothing to fill in by hand
+- Signing in with Google a second time returns to the same account, never a duplicate
+
+### 🖼️ A real photo, not just an emoji
+- Upload a JPG, PNG, WEBP, or GIF (up to 4MB) as your profile photo — it replaces the emoji everywhere your card appears: your own preview, your shared link, and every circle's streak board
+- Swap it or drop back to an emoji any time; invalid files and oversized files are rejected before anything is sent
+
+### 🔒 A circle can be open, or ask-to-join
+- New setting when creating a circle: anyone with the code joins instantly (unchanged default), or every request needs the owner's yes first
+- The owner gets an inbox — see who's asking, let them in or decline, no explanation required
+- Declining isn't a ban: a declined person can ask again
+- A private circle carries a lock badge so members always know which kind they're in
+
+### 🎉 A small "that counted" moment
+- Finishing a shared task in a circle now gets a brief, friendly toast — never shown for un-checking something back open
+
+### 🧪 Tests
+- 10 more Playwright tests: Google sign-up and repeat sign-in, real photo upload/replace/remove/reject, and the full ask-to-join lifecycle (request → owner's inbox → accept/decline → re-request)
+- `supabase/tests` now also proves the ask-to-join flow, the owner-only inbox, and an uploaded photo flowing through the streak board — on real Postgres 16, not a mock
+- A fake Google OAuth endpoint and a fake Supabase Storage API (including real multipart/form-data parsing — `supabase-js` uploads a `File` as multipart, not raw bytes) let the suite drive both features in a real browser without a real Google account
+
+### 🐛 Fixed
+- A shared profile's uploaded photo never reached the public `/u/<username>` page — `PublicProfile.tsx` built the card without passing `avatarUrl` through, and because the field was typed optional, the type checker had nothing to say about it. It's required now, so a future omission fails the build instead of shipping a silently broken photo.
+
+---
+
+## [Unreleased] — Profiles you can share
+
+### 🪪 A profile of your own
+- A profile page with a name, a `@username`, a bio, an emoji, and a colour — with a live preview of the exact card a friend will see
+- Every profile has a link, `/u/yourname`, that opens for anyone you send it to, signed in or not; a one-tap Copy button puts it on your clipboard
+- Tap any member of a circle to open their profile, straight from the streak board
+
+### 🔒 You decide what is on it
+- Four switches: share the profile at all, show your streak, show tasks finished, show focus time — each one independent
+- A number you switch off is not hidden in the page, it is never sent; a profile you switch off returns nothing at all, and looks exactly like a handle nobody owns
+- Task text is never shared under any setting. The shared card carries counts and dates only
+
+### 🌍 Your day, your timezone
+- A member's day now starts and ends where *they* are. A 7pm focus session in California is credited to that day on every board, including one being read in London
+
+### 🧪 Tests
+- Seven more Playwright tests cover building a card, following a shared link while signed out, each privacy switch, and opening a circle mate's profile
+- One of them reads computed colours in both themes, because a CSS override that out-specified the active day silently greyed out today's square with every other test still passing
+- The E2E servers are no longer reused between runs — a preview left over from an earlier session kept serving the previous bundle, so the suite passed against code that was no longer on disk
+
+---
+
+## [Unreleased] — Circles, usernames & an end-to-end test suite
+
+### 👥 Circles — shared lists for students, friends, and coworkers
+- Create a circle, get a 6-character invite code, and anyone with the code can join
+- One shared task list per circle: everybody sees it, everybody can tick things off, and each task shows who added it and who finished it
+- A "Streaks together" board shows every member's last 7 days, today's completed tasks, focus sessions, and focus time — dates and counts only, never anyone's task text
+- Your private tasks stay private: row-level security only exposes a task to a circle when you deliberately add it there
+- Leaving a circle keeps your own tasks and streak; only the owner can delete the circle
+
+### 🏷️ Usernames
+- Every account now has a public `@handle`, created automatically at sign-up from the email and renameable in Settings
+- Handles are unique, validated in the browser and enforced by a database constraint
+
+### 🧪 End-to-end tests
+- A Playwright suite drives the production bundle in a real browser against a stand-in Supabase backend: sign-up, task saving, offline recovery, account isolation, circles, and profiles
+- SQL checks run the real schema on a throwaway Postgres and assert the row-level security policies, the completion trigger, and the shared-streak function
+
+### 🐛 Fixes
+- Tasks no longer disappear from the list when the page is reloaded without a connection — the app was treating "Supabase has not resolved the session yet" as a sign-out and clearing this browser's cached tasks
+- A task shared with a circle is no longer pulled into your personal Today list, where the next sync would have quietly made it private again
+
+---
+
 ## [Unreleased] — Durable task saving
 
 ### 💾 Tasks always reach your account

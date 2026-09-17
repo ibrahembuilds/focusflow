@@ -4,6 +4,7 @@ import { Analytics as VercelAnalytics } from '@vercel/analytics/react';
 import Onboarding from './components/Onboarding';
 import Sidebar from './components/Sidebar';
 import Landing from './components/Landing';
+import CookieConsent from './components/CookieConsent';
 import Login from './components/auth/Login';
 import Signup from './components/auth/Signup';
 import ForgotPassword from './components/auth/ForgotPassword';
@@ -11,7 +12,10 @@ import ResetPassword from './components/auth/ResetPassword';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import Seo from './components/Seo';
 import { AuthProvider, useAuth } from './lib/auth';
+import { useCookieConsent } from './lib/consent';
 import { useStore } from './store';
+
+const PrivacyPolicy = lazy(() => import('./components/PrivacyPolicy'));
 
 const Dashboard = lazy(() => import('./components/Dashboard'));
 const Timer = lazy(() => import('./components/Timer'));
@@ -20,6 +24,10 @@ const CalendarView = lazy(() => import('./components/CalendarView'));
 const Analytics = lazy(() => import('./components/Analytics'));
 const AIDecompose = lazy(() => import('./components/AIDecompose'));
 const Settings = lazy(() => import('./components/Settings'));
+const Circles = lazy(() => import('./components/Circles'));
+const CircleDetail = lazy(() => import('./components/CircleDetail'));
+const Profile = lazy(() => import('./components/Profile'));
+const PublicProfile = lazy(() => import('./components/PublicProfile'));
 
 function RouteFallback() {
   return (
@@ -48,6 +56,9 @@ function AppShell() {
             <Route path="tasks" element={<TaskList />} />
             <Route path="calendar" element={<CalendarView />} />
             <Route path="analytics" element={<Analytics />} />
+            <Route path="profile" element={<Profile />} />
+            <Route path="circles" element={<Circles />} />
+            <Route path="circles/:circleId" element={<CircleDetail />} />
             <Route path="ai-decompose" element={<AIDecompose />} />
             <Route path="settings" element={<Settings />} />
           </Routes>
@@ -58,15 +69,20 @@ function AppShell() {
 }
 
 function StoreAuthBridge() {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
   const hydrateForUser = useStore((state) => state.hydrateForUser);
 
   useEffect(() => {
+    // Wait for Supabase to actually resolve the stored session. On every page
+    // load it reports "no user" first; treating that as a sign-out would clear
+    // this browser's cached tasks before the real session arrives — and if the
+    // network is down, there is nothing to fetch them back with.
+    if (loading) return;
     // Depend on the id only — Supabase emits a fresh `user` object on token
     // refresh too, and re-fetching tasks/sessions on every refresh would be wasted work.
     void hydrateForUser(user ? { id: user.id, user_metadata: user.user_metadata } : null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.id, hydrateForUser]);
+  }, [loading, user?.id, hydrateForUser]);
 
   return null;
 }
@@ -98,12 +114,37 @@ export default function App() {
           <Route path="/signup" element={<Signup />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password" element={<ResetPassword />} />
+          <Route
+            path="/privacy"
+            element={
+              <Suspense fallback={<RouteFallback />}>
+                <PrivacyPolicy />
+              </Suspense>
+            }
+          />
+          {/* A shared profile opens for anyone holding the link, signed in or not. */}
+          <Route
+            path="/u/:username"
+            element={
+              <Suspense fallback={<RouteFallback />}>
+                <PublicProfile />
+              </Suspense>
+            }
+          />
           <Route element={<ProtectedRoute />}>
             <Route path="/app/*" element={<AppShell />} />
           </Route>
         </Routes>
-        <VercelAnalytics />
+        <CookieConsent />
+        <ConsentedAnalytics />
       </AuthProvider>
     </BrowserRouter>
   );
+}
+
+/** Vercel Analytics never loads until the visitor has actually said yes. */
+function ConsentedAnalytics() {
+  const consent = useCookieConsent();
+  if (consent !== 'accepted') return null;
+  return <VercelAnalytics />;
 }

@@ -1,4 +1,4 @@
-# FocusFlow — https://prmoda.netlify.app
+# FocusFlow — https://focusflowai.site
 User-agent: *
 Allow: /
 
@@ -34,4 +34,4 @@ Allow: /
 User-agent: CCBot
 Allow: /
 
-Sitemap: https://prmoda.netlify.app/sitemap.xml
+Sitemap: https://focusflowai.site/sitemap.xml

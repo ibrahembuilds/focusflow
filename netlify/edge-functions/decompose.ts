@@ -5,13 +5,37 @@ const MAX_GOAL_LENGTH = 2_000;
 const DECOMPOSE_PROMPT = `You are FocusFlow AI, a productivity assistant. Break the user's goal into practical subtasks.
 
 Rules:
-- Return a JSON object of the shape {"tasks": [{"text": string, "priority": "low"|"medium"|"high", "estimatedSessions": number}]}.
 - Start every subtask's text with a clear verb.
 - Create 4-8 subtasks in a logical, sequential order.
 - Keep each subtask small enough to finish in one or two focus sessions.
 - priority reflects how urgent/foundational the step is: "high" for blocking or time-sensitive steps, "medium" for normal steps, "low" for optional or nice-to-have steps.
 - estimatedSessions is a whole number from 1 to 4 — a realistic guess at how many 25-minute focus sessions the subtask takes.
-- Use simple, direct language. Return only the JSON object, no other text.`;
+- Use simple, direct language.`;
+
+// A schema-constrained response (below) means OpenAI itself refuses to
+// return anything that doesn't match this shape — the model can't hand back
+// a missing field or a priority outside the enum, so there's no longer a
+// regex-extraction guess to make on our end.
+const DECOMPOSE_SCHEMA = {
+  type: 'object',
+  properties: {
+    tasks: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          text: { type: 'string' },
+          priority: { type: 'string', enum: ['low', 'medium', 'high'] },
+          estimatedSessions: { type: 'integer', minimum: 1, maximum: 4 },
+        },
+        required: ['text', 'priority', 'estimatedSessions'],
+        additionalProperties: false,
+      },
+    },
+  },
+  required: ['tasks'],
+  additionalProperties: false,
+} as const;
 
 type OpenAIResponse = {
   choices?: Array<{ message?: { content?: string } }>;
@@ -32,36 +56,44 @@ function json(data: unknown, status = 200) {
   });
 }
 
+/**
+ * The schema above already guarantees this shape came back from OpenAI — the
+ * only thing left to guard against is a response cut short by the token
+ * limit, which produces syntactically invalid JSON no schema can prevent.
+ */
 function parseTasks(content: string): DecomposedTask[] {
-  const objectMatch = content.match(/\{[\s\S]*\}/);
-  const candidate = objectMatch?.[0] ?? content;
-
   try {
-    const parsed: unknown = JSON.parse(candidate);
-    const rawTasks =
-      parsed && typeof parsed === 'object' && 'tasks' in parsed && Array.isArray((parsed as any).tasks)
-        ? (parsed as any).tasks
-        : Array.isArray(parsed)
-          ? parsed
-          : [];
-
-    return rawTasks.reduce<DecomposedTask[]>((acc, item) => {
-      const text = typeof item === 'string' ? item : typeof item?.text === 'string' ? item.text : '';
-      if (!text.trim()) return acc;
-
-      const priority: Priority =
-        item?.priority === 'high' || item?.priority === 'low' ? item.priority : 'medium';
-      const estimatedSessions =
-        typeof item?.estimatedSessions === 'number' && Number.isFinite(item.estimatedSessions)
-          ? Math.min(4, Math.max(1, Math.round(item.estimatedSessions)))
-          : 1;
-
-      acc.push({ text: text.trim(), priority, estimatedSessions });
-      return acc;
-    }, []);
+    const parsed = JSON.parse(content) as { tasks?: DecomposedTask[] };
+    return Array.isArray(parsed.tasks)
+      ? parsed.tasks.filter((task) => typeof task.text === 'string' && task.text.trim().length > 0)
+      : [];
   } catch {
     return [];
   }
+}
+
+/**
+ * One retry, and only for the failure modes a second attempt can plausibly
+ * fix: a dropped connection, or OpenAI's own 5xx. A 4xx (bad key, bad
+ * request) will fail identically the second time, so it isn't retried.
+ */
+async function fetchOpenAI(payload: unknown, apiKey: string): Promise<Response> {
+  let lastError: unknown;
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    try {
+      const response = await fetch(OPENAI_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
+        body: JSON.stringify(payload),
+      });
+      if (response.ok || response.status < 500) return response;
+      lastError = new Error(`OpenAI responded ${response.status}`);
+    } catch (cause) {
+      lastError = cause;
+    }
+    if (attempt === 0) await new Promise((resolve) => setTimeout(resolve, 400));
+  }
+  throw lastError;
 }
 
 export default async (request: Request) => {
@@ -112,13 +144,8 @@ export default async (request: Request) => {
       : goal;
 
   try {
-    const response = await fetch(OPENAI_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
+    const response = await fetchOpenAI(
+      {
         model: Deno.env.get('OPENAI_MODEL') || 'gpt-4o-mini',
         messages: [
           { role: 'system', content: DECOMPOSE_PROMPT },
@@ -127,9 +154,13 @@ export default async (request: Request) => {
         // max_completion_tokens (not the legacy max_tokens) and no custom
         // temperature — newer model generations reject both of those.
         max_completion_tokens: 800,
-        response_format: { type: 'json_object' },
-      }),
-    });
+        response_format: {
+          type: 'json_schema',
+          json_schema: { name: 'decomposed_tasks', strict: true, schema: DECOMPOSE_SCHEMA },
+        },
+      },
+      apiKey,
+    );
 
     if (!response.ok) {
       const errorBody = await response.text().catch(() => '');
