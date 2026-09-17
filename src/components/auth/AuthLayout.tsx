@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { ListTodo, Timer, TrendingUp } from 'lucide-react';
+import CookieConsent from '../CookieConsent';
 
 const FEATURES = [
   { icon: ListTodo, text: 'Plan your day with clear, prioritized tasks' },
@@ -21,6 +22,7 @@ export default function AuthLayout({
 }) {
   return (
     <div className="auth-page">
+      <CookieConsent inline />
       <div className="auth-visual" aria-hidden="true">
         <Link to="/" className="auth-visual-brand">
           <img src="/brand/focusflow-mark.svg" alt="" />

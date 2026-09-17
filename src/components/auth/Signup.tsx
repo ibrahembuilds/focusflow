@@ -124,7 +124,10 @@ export default function Signup() {
         )}
 
         <div className="auth-field">
-          <label htmlFor="signup-name">Name</label>
+          {/* "Your name", not "Name" — the latter is a substring of the
+              Username field below ("user-name"), so a getByLabel('Name')
+              lookup used to resolve to both inputs. */}
+          <label htmlFor="signup-name">Your name</label>
           <div className="auth-input-wrap">
             <User size={16} aria-hidden="true" />
             <input
