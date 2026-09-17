@@ -4,6 +4,7 @@ import { Analytics as VercelAnalytics } from '@vercel/analytics/react';
 import Onboarding from './components/Onboarding';
 import Sidebar from './components/Sidebar';
 import Landing from './components/Landing';
+import CookieConsent from './components/CookieConsent';
 import Login from './components/auth/Login';
 import Signup from './components/auth/Signup';
 import ForgotPassword from './components/auth/ForgotPassword';
@@ -11,7 +12,10 @@ import ResetPassword from './components/auth/ResetPassword';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import Seo from './components/Seo';
 import { AuthProvider, useAuth } from './lib/auth';
+import { useCookieConsent } from './lib/consent';
 import { useStore } from './store';
+
+const PrivacyPolicy = lazy(() => import('./components/PrivacyPolicy'));
 
 const Dashboard = lazy(() => import('./components/Dashboard'));
 const Timer = lazy(() => import('./components/Timer'));
@@ -110,6 +114,14 @@ export default function App() {
           <Route path="/signup" element={<Signup />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password" element={<ResetPassword />} />
+          <Route
+            path="/privacy"
+            element={
+              <Suspense fallback={<RouteFallback />}>
+                <PrivacyPolicy />
+              </Suspense>
+            }
+          />
           {/* A shared profile opens for anyone holding the link, signed in or not. */}
           <Route
             path="/u/:username"
@@ -123,8 +135,16 @@ export default function App() {
             <Route path="/app/*" element={<AppShell />} />
           </Route>
         </Routes>
-        <VercelAnalytics />
+        <CookieConsent />
+        <ConsentedAnalytics />
       </AuthProvider>
     </BrowserRouter>
   );
+}
+
+/** Vercel Analytics never loads until the visitor has actually said yes. */
+function ConsentedAnalytics() {
+  const consent = useCookieConsent();
+  if (consent !== 'accepted') return null;
+  return <VercelAnalytics />;
 }

@@ -4,6 +4,34 @@ All notable changes to the FocusFlow productivity platform.
 
 ---
 
+## [Unreleased] — A profile fix, cookie consent, a real privacy policy, a caught-up landing page, and a sturdier AI
+
+### 🐛 Fixed
+- The name you give during onboarding now actually reaches your shareable profile card, not just the sidebar greeting. Before this, onboarding wrote your name to the auth account's own metadata only — the newer profile card reads a separate column that nothing was updating, so a named account could still show up to friends as a bare `@handle`.
+
+### 🍪 Cookie consent that actually gates something
+- A real banner, not a decorative one: Vercel Analytics does not load at all until you accept it. Declining costs you nothing — the app works identically either way.
+- The choice is remembered and never asked twice.
+
+### 📄 A real Privacy Policy
+- `/privacy` — written to match what this app actually does (Supabase for auth/data/photos, OpenAI for the AI breakdown feature, Google only if you use that sign-in, Vercel only with consent), not a generic template. Linked from the landing footer, the signup page, and the cookie banner.
+- Honest about a real gap: there's no self-service "delete my account" button yet, so the policy says to email instead of pretending otherwise.
+
+### 🏠 The landing page catches up
+- Circles, shareable profiles, and Google sign-in are now actually mentioned on the marketing page — they shipped over the last few updates and the page never once referenced them.
+- Two new FAQ entries (also feeds the page's structured data for search).
+
+### 🧠 A sturdier AI Breakdown
+- Both AI endpoints (goal → subtasks, goal → clarifying questions) now use OpenAI's strict JSON-Schema structured outputs instead of loose JSON-object mode. OpenAI itself refuses to return anything off-shape now, which retires the regex-based fallback parser that used to guess at malformed responses.
+- One automatic retry on a dropped connection or an OpenAI 5xx, before surfacing an error — the two failure modes a second attempt can actually fix. A 4xx (bad key, bad request) still fails immediately, since retrying that changes nothing.
+- Applied identically to both the Vercel and Netlify copies of each endpoint.
+
+### 🧪 Tests
+- New coverage for the onboarding name fix (walks the real flow instead of skipping it, checks both the sidebar and the profile card) and cookie consent (shows once, both choices persist, links to a real policy page).
+- Caught a real bug before it shipped: the cookie banner was given `role="dialog"`, which collided with the onboarding modal's own dialog role and broke "is anything still open" checks across roughly 35 existing tests. Fixed to `role="region"` — a non-modal banner isn't a dialog.
+
+---
+
 ## [Unreleased] — Google sign-in, real photos, and private groups
 
 ### 🔑 Sign in with Google

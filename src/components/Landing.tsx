@@ -9,6 +9,9 @@ import {
   Flame,
   Check,
   Menu,
+  Users,
+  Link2,
+  LogIn,
 } from 'lucide-react';
 import { useState } from 'react';
 import { useAuth } from '../lib/auth';
@@ -32,6 +35,15 @@ const FAQS = [
   {
     question: 'Does FocusFlow work on mobile?',
     answer: 'Yes. FocusFlow is fully responsive and works in any modern mobile or desktop browser.',
+  },
+  {
+    question: 'Can I share tasks with a study group, friends, or coworkers?',
+    answer:
+      'Yes — create a Circle and share the invite code, or set it to ask-to-join if you want to approve people yourself. Everyone in the circle sees the shared list, can check things off, and sees each other\'s streaks — never anyone\'s private tasks.',
+  },
+  {
+    question: 'Can I sign in with Google?',
+    answer: 'Yes. Use "Continue with Google" on the sign-up or log-in page — no password to remember.',
   },
 ];
 
@@ -75,6 +87,21 @@ const FEATURES = [
     icon: Flame,
     title: 'Streaks that motivate',
     description: 'Build a rhythm you can see — one focused day at a time.',
+  },
+  {
+    icon: Users,
+    title: 'Bring your people in',
+    description: 'Share a list with a study group, friends, or coworkers — open by code, or ask-to-join if you\'d rather approve people yourself.',
+  },
+  {
+    icon: Link2,
+    title: 'A profile worth sharing',
+    description: 'A card at your own link with your streak and photo — you choose exactly what it shows.',
+  },
+  {
+    icon: LogIn,
+    title: 'Sign in your way',
+    description: 'Email and password, or continue with Google — no new password to remember.',
   },
 ];
 
@@ -170,7 +197,8 @@ export default function Landing() {
           </h1>
           <p className="landing-hero-subtitle">
             FocusFlow pairs a clear daily task list with a focus timer, AI-powered planning, and
-            progress you can actually see. No noise, no clutter — just steady work.
+            progress you can actually see — solo, or shared with a circle of your own. No noise, no
+            clutter — just steady work.
           </p>
           <div className="landing-hero-actions">
             <Link to={user ? '/app' : '/signup'} className="btn btn-primary btn-lg">
@@ -278,6 +306,9 @@ export default function Landing() {
             <span>FocusFlow</span>
           </div>
           <p>&copy; {new Date().getFullYear()} FocusFlow. Made for focused work.</p>
+          <Link to="/privacy" className="landing-footer-link">
+            Privacy Policy
+          </Link>
         </div>
       </footer>
     </div>

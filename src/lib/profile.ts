@@ -277,3 +277,24 @@ export async function uploadAvatar(
     return { url: null, error: messageOf(cause) };
   }
 }
+
+/**
+ * Updates just the display name — the trigger that creates a profile at
+ * sign-up already gives it a username, so onboarding (which only ever asks
+ * for a name) has no reason to touch it. A plain UPDATE also can't race a
+ * separate username change the way an upsert built from a stale read could.
+ */
+export async function updateDisplayName(
+  userId: string,
+  displayName: string,
+): Promise<{ error: string | null }> {
+  try {
+    const { error } = await supabase
+      .from('profiles')
+      .update({ display_name: displayName.trim() || null })
+      .eq('id', userId);
+    return { error: error?.message ?? null };
+  } catch (cause) {
+    return { error: messageOf(cause) };
+  }
+}

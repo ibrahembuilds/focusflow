@@ -5,11 +5,21 @@ const MAX_GOAL_LENGTH = 2_000;
 const CLARIFY_PROMPT = `You are FocusFlow AI, a productivity assistant. A user gave you a goal. Ask a few short clarifying questions that would help you create a better, more personalized action plan for them.
 
 Rules:
-- Return a JSON object of the shape {"questions": string[]}.
 - Ask 2 to 4 questions, no more.
 - Each question must be short (under 15 words) and directly useful for planning: timeline, current experience level, constraints, budget, specific sub-goal, or available resources.
-- Do not ask questions unrelated to planning the goal, and do not explain your reasoning.
-- Return only the JSON object, no other text.`;
+- Do not ask questions unrelated to planning the goal, and do not explain your reasoning.`;
+
+// A schema-constrained response means OpenAI itself refuses to return
+// anything but a string array under "questions" — no regex-extraction guess
+// to make on our end, and no risk of a stray non-string slipping through.
+const CLARIFY_SCHEMA = {
+  type: 'object',
+  properties: {
+    questions: { type: 'array', items: { type: 'string' } },
+  },
+  required: ['questions'],
+  additionalProperties: false,
+} as const;
 
 type OpenAIResponse = {
   choices?: Array<{ message?: { content?: string } }>;
@@ -22,23 +32,44 @@ function json(data: unknown, status = 200) {
   });
 }
 
+/**
+ * The schema above already guarantees this shape came back from OpenAI — the
+ * only thing left to guard against is a response cut short by the token
+ * limit, which produces syntactically invalid JSON no schema can prevent.
+ */
 function parseQuestions(content: string): string[] {
-  const objectMatch = content.match(/\{[\s\S]*\}/);
-  const candidate = objectMatch?.[0] ?? content;
-
   try {
-    const parsed: unknown = JSON.parse(candidate);
-    const raw =
-      parsed && typeof parsed === 'object' && 'questions' in parsed && Array.isArray((parsed as any).questions)
-        ? (parsed as any).questions
-        : Array.isArray(parsed)
-          ? parsed
-          : [];
-
-    return raw.filter((q: unknown): q is string => typeof q === 'string' && q.trim().length > 0).map((q: string) => q.trim());
+    const parsed = JSON.parse(content) as { questions?: unknown[] };
+    return Array.isArray(parsed.questions)
+      ? parsed.questions.filter((q): q is string => typeof q === 'string' && q.trim().length > 0)
+      : [];
   } catch {
     return [];
   }
+}
+
+/**
+ * One retry, and only for the failure modes a second attempt can plausibly
+ * fix: a dropped connection, or OpenAI's own 5xx. A 4xx (bad key, bad
+ * request) will fail identically the second time, so it isn't retried.
+ */
+async function fetchOpenAI(payload: unknown, apiKey: string): Promise<Response> {
+  let lastError: unknown;
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    try {
+      const response = await fetch(OPENAI_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
+        body: JSON.stringify(payload),
+      });
+      if (response.ok || response.status < 500) return response;
+      lastError = new Error(`OpenAI responded ${response.status}`);
+    } catch (cause) {
+      lastError = cause;
+    }
+    if (attempt === 0) await new Promise((resolve) => setTimeout(resolve, 400));
+  }
+  throw lastError;
 }
 
 export default async (request: Request) => {
@@ -69,22 +100,21 @@ export default async (request: Request) => {
   }
 
   try {
-    const response = await fetch(OPENAI_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
+    const response = await fetchOpenAI(
+      {
         model: Deno.env.get('OPENAI_MODEL') || 'gpt-4o-mini',
         messages: [
           { role: 'system', content: CLARIFY_PROMPT },
           { role: 'user', content: goal },
         ],
         max_completion_tokens: 300,
-        response_format: { type: 'json_object' },
-      }),
-    });
+        response_format: {
+          type: 'json_schema',
+          json_schema: { name: 'clarifying_questions', strict: true, schema: CLARIFY_SCHEMA },
+        },
+      },
+      apiKey,
+    );
 
     if (!response.ok) {
       const errorBody = await response.text().catch(() => '');

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { ArrowLeft, ArrowRight, Check, Clock3, ListTodo, User, X } from 'lucide-react';
 import { useStore } from '../store';
 import { useAuth } from '../lib/auth';
+import { updateDisplayName } from '../lib/profile';
 
 const SESSION_OPTIONS = [15, 25, 45] as const;
 
@@ -37,7 +38,7 @@ export default function Onboarding() {
     timerMinutes,
     setTimerMinutes,
   } = useStore();
-  const { updateProfile } = useAuth();
+  const { user, updateProfile } = useAuth();
   const [step, setStep] = useState(0);
   const [name, setName] = useState('');
   const [firstTask, setFirstTask] = useState('');
@@ -65,7 +66,14 @@ export default function Onboarding() {
 
   function finishOnboarding() {
     const trimmedName = name.trim();
-    if (trimmedName) void updateProfile({ fullName: trimmedName });
+    if (trimmedName) {
+      // Two places currently read a display name: the sidebar greeting
+      // (the auth user's own metadata) and the shareable profile card (the
+      // `profiles` table). Nothing keeps them in sync on its own, so this
+      // writes both rather than picking one and leaving the other blank.
+      void updateProfile({ fullName: trimmedName });
+      if (user) void updateDisplayName(user.id, trimmedName);
+    }
 
     const taskText = firstTask.trim();
     if (taskText) {
