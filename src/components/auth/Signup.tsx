@@ -225,7 +225,8 @@ export default function Signup() {
       <GoogleSignInButton label="Sign up with Google" />
 
       <p className="auth-legal">
-        By creating an account, you agree to our <Link to="/privacy">Privacy Policy</Link>.
+        By creating an account, you agree to our <Link to="/terms">Terms of Service</Link> and{' '}
+        <Link to="/privacy">Privacy Policy</Link>.
       </p>
 
       <p className="auth-switch">

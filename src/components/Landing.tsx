@@ -306,9 +306,14 @@ export default function Landing() {
             <span>FocusFlow</span>
           </div>
           <p>&copy; {new Date().getFullYear()} FocusFlow. Made for focused work.</p>
-          <Link to="/privacy" className="landing-footer-link">
-            Privacy Policy
-          </Link>
+          <div className="landing-footer-links">
+            <Link to="/privacy" className="landing-footer-link">
+              Privacy Policy
+            </Link>
+            <Link to="/terms" className="landing-footer-link">
+              Terms of Service
+            </Link>
+          </div>
         </div>
       </footer>
     </div>

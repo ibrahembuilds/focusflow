@@ -17,6 +17,8 @@ import { useCookieConsent } from './lib/consent';
 import { useStore } from './store';
 
 const PrivacyPolicy = lazy(() => import('./components/PrivacyPolicy'));
+const Terms = lazy(() => import('./components/Terms'));
+const NotFound = lazy(() => import('./components/NotFound'));
 
 const Dashboard = lazy(() => import('./components/Dashboard'));
 const Timer = lazy(() => import('./components/Timer'));
@@ -124,6 +126,14 @@ export default function App() {
               </Suspense>
             }
           />
+          <Route
+            path="/terms"
+            element={
+              <Suspense fallback={<RouteFallback />}>
+                <Terms />
+              </Suspense>
+            }
+          />
           {/* A shared profile opens for anyone holding the link, signed in or not. */}
           <Route
             path="/u/:username"
@@ -136,6 +146,16 @@ export default function App() {
           <Route element={<ProtectedRoute />}>
             <Route path="/app/*" element={<AppShell />} />
           </Route>
+          {/* Ranked-match routing (not declaration order) means this never
+              shadows /app/* — anything more specific still wins. */}
+          <Route
+            path="*"
+            element={
+              <Suspense fallback={<RouteFallback />}>
+                <NotFound />
+              </Suspense>
+            }
+          />
         </Routes>
         <CookieConsent />
         <ConsentedAnalytics />

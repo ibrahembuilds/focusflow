@@ -3265,6 +3265,12 @@ h3 {
   border-top: 1px solid var(--border-subtle);
 }
 
+.landing-footer-links {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+}
+
 .landing-footer-link {
   color: var(--text-tertiary);
   font-size: 0.82rem;
@@ -3954,6 +3960,17 @@ h3 {
   color: var(--text-tertiary);
   font-size: 0.75rem;
   line-height: 1.45;
+}
+
+/* ── 404 ── */
+
+.not-found-page {
+  min-height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem 1rem;
+  background: var(--bg-root);
 }
 
 /* ── The page a shared link opens ── */
