@@ -9,6 +9,7 @@ import Login from './components/auth/Login';
 import Signup from './components/auth/Signup';
 import ForgotPassword from './components/auth/ForgotPassword';
 import ResetPassword from './components/auth/ResetPassword';
+import ConfirmEmail from './components/auth/ConfirmEmail';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import Seo from './components/Seo';
 import { AuthProvider, useAuth } from './lib/auth';
@@ -114,6 +115,7 @@ export default function App() {
           <Route path="/signup" element={<Signup />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password" element={<ResetPassword />} />
+          <Route path="/confirmed" element={<ConfirmEmail />} />
           <Route
             path="/privacy"
             element={

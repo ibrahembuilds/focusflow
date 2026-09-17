@@ -2732,6 +2732,41 @@ h3 {
   padding-left: 2.6rem;
 }
 
+.auth-input-wrap.has-toggle .input {
+  padding-right: 2.6rem;
+}
+
+.auth-toggle-visibility {
+  position: absolute;
+  right: 0.6rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.9rem;
+  height: 1.9rem;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--text-tertiary);
+  cursor: pointer;
+}
+
+.auth-toggle-visibility:hover {
+  color: var(--text-secondary);
+  background: var(--bg-soft);
+}
+
+.auth-field-hint {
+  margin-top: 0.35rem;
+  font-size: 0.76rem;
+  color: var(--text-tertiary);
+}
+
+.auth-field-hint.problem {
+  color: var(--color-danger-light);
+}
+
 .auth-error {
   display: flex;
   align-items: flex-start;

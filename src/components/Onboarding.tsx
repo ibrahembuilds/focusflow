@@ -40,7 +40,15 @@ export default function Onboarding() {
   } = useStore();
   const { user, updateProfile } = useAuth();
   const [step, setStep] = useState(0);
-  const [name, setName] = useState('');
+  // Already known if it came from the sign-up form or from Google — asking
+  // again with a blank field would just be retyping what we already have.
+  const [name, setName] = useState(
+    () =>
+      (user?.user_metadata?.fullName as string | undefined) ||
+      (user?.user_metadata?.full_name as string | undefined) ||
+      (user?.user_metadata?.name as string | undefined) ||
+      '',
+  );
   const [firstTask, setFirstTask] = useState('');
   const [duration, setDuration] = useState(timerMinutes);
 

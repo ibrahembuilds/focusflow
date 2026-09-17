@@ -487,11 +487,22 @@ function createUserAndProfile(email, metadata, password = '') {
 
   let username = email.split('@')[0].replace(/[^a-z0-9_]/g, '').slice(0, 16) || 'focususer';
   if (username.length < 3) username += 'focus';
-  let candidate = username;
+
+  // A sign-up form can offer a chosen handle — mirrors migration 005's
+  // addition to handle_new_user(): honored only when it actually satisfies
+  // the same rule the real check constraint enforces, otherwise ignored
+  // exactly like it was never sent.
+  const preferred = String(metadata?.preferredUsername ?? '').trim().toLowerCase();
+  const preferredValid = /^[a-z0-9_]{3,20}$/.test(preferred);
+
+  let candidate = preferredValid ? preferred : username;
   let suffix = 0;
   while (db.profiles.some((profile) => profile.username === candidate)) {
     suffix += 1;
-    candidate = `${username}${suffix}`;
+    // A taken preferred handle falls back to the email-derived one first,
+    // same as the real trigger's first retry, before it starts appending
+    // numbers to it.
+    candidate = suffix === 1 && preferredValid ? username : `${username}${suffix}`;
   }
 
   // Email/password sign-up sets `fullName`; Google (and most OAuth providers)

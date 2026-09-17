@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import type { FormEvent } from 'react';
 import { Navigate, Link, useLocation, useNavigate } from 'react-router-dom';
-import { LogIn, Mail, Lock, AlertCircle } from 'lucide-react';
+import { LogIn, Mail, Lock, Eye, EyeOff, AlertCircle } from 'lucide-react';
 import { useAuth } from '../../lib/auth';
 import AuthLayout from './AuthLayout';
 import GoogleSignInButton from './GoogleSignInButton';
@@ -14,6 +14,7 @@ export default function Login() {
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
@@ -63,6 +64,7 @@ export default function Login() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="you@example.com"
+              autoFocus
             />
           </div>
         </div>
@@ -72,12 +74,12 @@ export default function Login() {
             <label htmlFor="login-password">Password</label>
             <Link to="/forgot-password" className="auth-forgot-link">Forgot password?</Link>
           </div>
-          <div className="auth-input-wrap">
+          <div className="auth-input-wrap has-toggle">
             <Lock size={16} aria-hidden="true" />
             <input
               id="login-password"
               className="input"
-              type="password"
+              type={showPassword ? 'text' : 'password'}
               autoComplete="current-password"
               required
               minLength={6}
@@ -85,6 +87,16 @@ export default function Login() {
               onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"
             />
+            <button
+              type="button"
+              className="auth-toggle-visibility"
+              onClick={() => setShowPassword((v) => !v)}
+              // No "password" substring — see the matching comment in
+              // Signup.tsx for why that would collide with getByLabel('Password').
+              aria-label={showPassword ? 'Hide characters' : 'Show characters'}
+            >
+              {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+            </button>
           </div>
         </div>
 
