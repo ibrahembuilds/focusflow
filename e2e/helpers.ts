@@ -156,6 +156,10 @@ export async function signInWithGoogle(
       return route.continue({ url: url.toString() });
     });
   }
+  // Called right after a bare page.goto('/signup' | '/login') in the specs
+  // that use this, before anything else has dismissed the banner — same gap
+  // signUp()/logIn() close for their own callers.
+  await dismissCookieConsent(page);
   await page.getByRole('button', { name: buttonLabel }).click();
   // This is a real cross-document redirect, not an in-app route change, so
   // the URL lands as `/app#access_token=...` and then loses the hash via

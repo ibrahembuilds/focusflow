@@ -33,12 +33,16 @@ export default function PublicProfile() {
   return (
     <div className="public-profile-page">
       <Seo
-        title={profile ? `${name} on FocusFlow` : 'Profile'}
-        description={
-          profile?.bio ?? `${name}'s focus profile on FocusFlow.`
-        }
+        // Seo already appends " | FocusFlow" to every title — folding the
+        // site name in here too used to produce "Ibrahem on FocusFlow |
+        // FocusFlow" in the tab and in search results.
+        title={profile ? name : 'Profile'}
+        description={profile?.bio ?? `${name}'s focus profile on FocusFlow.`}
         path={`/u/${username}`}
         noindex={!profile}
+        // A real uploaded photo makes a far better share-link preview than
+        // the generic site logo every other page falls back to.
+        image={profile?.avatarUrl ?? undefined}
       />
 
       <header className="public-profile-header">

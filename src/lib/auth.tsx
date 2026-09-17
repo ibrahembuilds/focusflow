@@ -7,7 +7,11 @@ interface AuthContextValue {
   user: User | null;
   session: Session | null;
   loading: boolean;
-  signUp: (email: string, password: string) => Promise<{ error: string | null }>;
+  signUp: (
+    email: string,
+    password: string,
+    profile?: { fullName?: string; preferredUsername?: string },
+  ) => Promise<{ error: string | null }>;
   signIn: (email: string, password: string) => Promise<{ error: string | null }>;
   /** Redirects the browser to Google, then back to /app already signed in. */
   signInWithGoogle: () => Promise<{ error: string | null }>;
@@ -15,6 +19,10 @@ interface AuthContextValue {
   updateProfile: (data: { fullName?: string }) => Promise<{ error: string | null }>;
   resetPasswordForEmail: (email: string) => Promise<{ error: string | null }>;
   updatePassword: (newPassword: string) => Promise<{ error: string | null }>;
+  /** Re-sends the "confirm your account" email — for someone who missed or lost the first one. */
+  resendConfirmationEmail: (email: string) => Promise<{ error: string | null }>;
+  /** Completes the query-param style confirmation link (?token_hash=...&type=email). */
+  confirmEmail: (tokenHash: string) => Promise<{ error: string | null }>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -37,8 +45,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => listener.subscription.unsubscribe();
   }, []);
 
-  async function signUp(email: string, password: string) {
-    const { error } = await supabase.auth.signUp({ email, password });
+  async function signUp(
+    email: string,
+    password: string,
+    profile?: { fullName?: string; preferredUsername?: string },
+  ) {
+    // Read by handle_new_user() (supabase/migrations/005_signup_chosen_username.sql)
+    // as part of the same transaction that creates the account — not applied
+    // client-side afterward, since a project requiring email confirmation has
+    // no active session yet to write with at that point.
+    const data: Record<string, string> = {};
+    if (profile?.fullName) data.fullName = profile.fullName;
+    if (profile?.preferredUsername) data.preferredUsername = profile.preferredUsername;
+
+    const { error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: Object.keys(data).length > 0 ? { data } : undefined,
+    });
     return { error: error?.message ?? null };
   }
 
@@ -79,6 +103,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { error: error?.message ?? null };
   }
 
+  async function resendConfirmationEmail(email: string) {
+    const { error } = await supabase.auth.resend({
+      type: 'signup',
+      email,
+      options: { emailRedirectTo: `${window.location.origin}/confirmed` },
+    });
+    return { error: error?.message ?? null };
+  }
+
+  // Only needed for a project whose email template links to `?token_hash=...`
+  // (Supabase's newer default) rather than redirecting back with a session
+  // already in the URL hash (the older default, and the one ResetPassword.tsx
+  // already relies on for recovery links) — ConfirmEmail.tsx tries this only
+  // when there's a token_hash to verify.
+  async function confirmEmail(tokenHash: string) {
+    const { error } = await supabase.auth.verifyOtp({ token_hash: tokenHash, type: 'email' });
+    return { error: error?.message ?? null };
+  }
+
   return (
     <AuthContext.Provider
       value={{
@@ -92,6 +135,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         updateProfile,
         resetPasswordForEmail,
         updatePassword,
+        resendConfirmationEmail,
+        confirmEmail,
       }}
     >
       {children}

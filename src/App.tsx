@@ -9,6 +9,7 @@ import Login from './components/auth/Login';
 import Signup from './components/auth/Signup';
 import ForgotPassword from './components/auth/ForgotPassword';
 import ResetPassword from './components/auth/ResetPassword';
+import ConfirmEmail from './components/auth/ConfirmEmail';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import Seo from './components/Seo';
 import { AuthProvider, useAuth } from './lib/auth';
@@ -16,6 +17,8 @@ import { useCookieConsent } from './lib/consent';
 import { useStore } from './store';
 
 const PrivacyPolicy = lazy(() => import('./components/PrivacyPolicy'));
+const Terms = lazy(() => import('./components/Terms'));
+const NotFound = lazy(() => import('./components/NotFound'));
 
 const Dashboard = lazy(() => import('./components/Dashboard'));
 const Timer = lazy(() => import('./components/Timer'));
@@ -114,11 +117,20 @@ export default function App() {
           <Route path="/signup" element={<Signup />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password" element={<ResetPassword />} />
+          <Route path="/confirmed" element={<ConfirmEmail />} />
           <Route
             path="/privacy"
             element={
               <Suspense fallback={<RouteFallback />}>
                 <PrivacyPolicy />
+              </Suspense>
+            }
+          />
+          <Route
+            path="/terms"
+            element={
+              <Suspense fallback={<RouteFallback />}>
+                <Terms />
               </Suspense>
             }
           />
@@ -134,6 +146,16 @@ export default function App() {
           <Route element={<ProtectedRoute />}>
             <Route path="/app/*" element={<AppShell />} />
           </Route>
+          {/* Ranked-match routing (not declaration order) means this never
+              shadows /app/* — anything more specific still wins. */}
+          <Route
+            path="*"
+            element={
+              <Suspense fallback={<RouteFallback />}>
+                <NotFound />
+              </Suspense>
+            }
+          />
         </Routes>
         <CookieConsent />
         <ConsentedAnalytics />
