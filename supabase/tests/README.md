@@ -15,9 +15,16 @@ export PSQL="psql -v ON_ERROR_STOP=1 -q -d postgres://…"
 $PSQL -f supabase/tests/00_supabase_stubs.sql
 $PSQL -f supabase/schema.sql
 $PSQL -f supabase/migrations/002_profiles_and_circles.sql
+$PSQL -f supabase/migrations/003_shareable_profiles.sql
+$PSQL -f supabase/migrations/004_avatars_and_group_privacy.sql
 $PSQL -f supabase/tests/01_policies_test.sql
 # -> NOTICE:  ALL SQL BEHAVIOUR CHECKS PASSED
 ```
+
+Run every migration in order before the test file — it exercises columns and
+functions (avatar photos, `is_public`, ask-to-join circles) that only exist
+once 003 and 004 have run. Skipping either one fails with a plain
+`column ... does not exist` instead of a real assertion.
 
 Do **not** run `01_policies_test.sql` against your live project: it inserts
 test accounts into `auth.users`.

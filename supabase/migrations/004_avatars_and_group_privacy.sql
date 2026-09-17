@@ -365,6 +365,8 @@ as $$
 declare
   seeded_name text;
   seeded_avatar text;
+  candidate text;
+  attempt integer := 0;
 begin
   -- Email/password sign-up sets `fullName`; Google (and most OAuth
   -- providers) set `full_name` / `name` and `avatar_url` instead.
@@ -375,9 +377,32 @@ begin
   ), '');
   seeded_avatar := nullif(new.raw_user_meta_data ->> 'avatar_url', '');
 
-  insert into profiles (id, username, display_name, avatar_url)
-  values (new.id, public.suggest_username(new.email), seeded_name, seeded_avatar)
-  on conflict (id) do nothing;
+  candidate := public.suggest_username(new.email);
+
+  -- suggest_username() only checks that a handle looks free; it can't
+  -- reserve one. Two sign-ups deriving the same base (e.g. sam@gmail.com
+  -- and sam@yahoo.com landing in the same instant) can both pass that
+  -- check and then race on the real unique constraint below — and
+  -- `on conflict (id)` only covers the primary key, not `username`, so
+  -- that collision used to raise and abort the whole sign-up. Retrying
+  -- with a re-randomized candidate turns "your sign-up sometimes fails"
+  -- into "you get a slightly different handle".
+  loop
+    begin
+      insert into profiles (id, username, display_name, avatar_url)
+      values (new.id, candidate, seeded_name, seeded_avatar)
+      on conflict (id) do nothing;
+      exit;
+    exception
+      when unique_violation then
+        attempt := attempt + 1;
+        if attempt >= 5 then
+          raise;
+        end if;
+        candidate := left(candidate, 15) || substr(md5(random()::text), 1, 4);
+    end;
+  end loop;
+
   return new;
 end;
 $$;
