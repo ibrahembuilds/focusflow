@@ -3534,6 +3534,56 @@ h3 {
   flex-wrap: wrap;
 }
 
+.circle-description {
+  margin: -0.5rem 0 1.25rem;
+  color: var(--text-tertiary);
+  font-size: 0.85rem;
+  line-height: 1.55;
+}
+
+.circle-description-edit-btn,
+.circle-description-add-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  margin: 0 0 1.25rem;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--color-primary-light);
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.circle-description-edit-btn {
+  margin: 0 0 0 0.6rem;
+  vertical-align: middle;
+}
+
+.circle-description-edit-btn:hover,
+.circle-description-add-btn:hover {
+  text-decoration: underline;
+}
+
+.circle-description-edit {
+  margin-bottom: 1.25rem;
+}
+
+.circle-description-edit-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.6rem;
+  margin-top: 0.5rem;
+}
+
+.circle-description-edit-actions small {
+  margin-right: auto;
+  color: var(--text-tertiary);
+  font-size: 0.72rem;
+}
+
 .invite-code {
   display: inline-flex;
   align-items: center;

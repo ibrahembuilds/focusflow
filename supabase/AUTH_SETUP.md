@@ -6,6 +6,25 @@ that seeds a name/photo/username from whichever path someone used. What's
 left is dashboard configuration only you can do, since it's your Supabase
 project and your Google Cloud project.
 
+## 0. Redirect URLs (needed by everything below)
+
+Three different flows send the browser back to a specific in-app page after
+Supabase does its part — a confirmation link, a password-reset link, and
+Google's own redirect. Each one only works if its destination is on this
+allow-list; anything not listed is silently refused, which looks like a
+broken link with no error message.
+
+Open **[Auth → URL Configuration](https://supabase.com/dashboard/project/_/auth/url-configuration)**:
+
+- **Site URL**: `https://focusflowai.site`
+- **Redirect URLs** — add all three exact paths (Supabase's own docs
+  recommend exact paths over a wildcard for production; `**` wildcards are
+  fine for local/preview only):
+  - `https://focusflowai.site/app` — where Google sign-in lands
+  - `https://focusflowai.site/confirmed` — where an email-confirmation link lands
+  - `https://focusflowai.site/reset-password` — where a password-reset link lands
+  - For local dev, add the same three under `http://localhost:5173/...`
+
 ## 1. Email confirmation
 
 This is a project setting, not something the app code turns on or off.
@@ -15,25 +34,24 @@ This is a project setting, not something the app code turns on or off.
    With it on, `supabase.auth.signUp()` creates the account but returns no
    session until the link is clicked; the app already handles this (Signup
    shows a "Check your inbox" screen with a **Resend the email** button).
-2. Open **[Auth → URL Configuration](https://supabase.com/dashboard/project/_/auth/url-configuration)**
-   and make sure your real domain is registered:
-   - **Site URL**: `https://focusflowai.site`
-   - **Redirect URLs**: add `https://focusflowai.site/confirmed` (and
-     `http://localhost:5173/confirmed` too, for local dev). A confirmation
-     link can only redirect to an address on this list — Supabase silently
-     refuses anything else.
-3. That's it. The confirmation email's link already points wherever `Site
-   URL` + the app's `emailRedirectTo` say to (`/confirmed`), and
-   `src/components/auth/ConfirmEmail.tsx` handles that page — it shows a
-   spinner, then either "Email confirmed" (with a way into the app) or a
-   clear "link isn't valid, here's how to get a new one" state. It works
-   with either of Supabase's two email-template styles (a session already in
-   the URL, or a `token_hash` it verifies itself), so you don't need to
-   check which one your project's template uses.
+2. Make sure `/confirmed` is on the Redirect URLs allow-list — see section 0
+   above. Both the initial confirmation email and a resend point there
+   (`src/lib/auth.tsx`'s `signUp()` and `resendConfirmationEmail()` both set
+   `emailRedirectTo` explicitly, rather than relying on whatever the bare
+   Site URL happens to be).
+3. That's it. `src/components/auth/ConfirmEmail.tsx` handles that page — it
+   shows a spinner, then either "Email confirmed" (with a way into the app)
+   or a clear "link isn't valid, here's how to get a new one" state. It
+   works with either of Supabase's two email-template styles (a session
+   already in the URL, or a `token_hash` it verifies itself), so you don't
+   need to check which one your project's template uses.
 
 **Optional:** Auth Providers → Email also has an **Email Templates** page if
 you want to customize the confirmation email's subject/wording — not
-required, the default works.
+required, the default works. A branded one is ready to use:
+`supabase/email-templates/confirm-signup.html` — open it, copy everything
+inside `<body>...</body>` into the **Confirm signup** template's body field,
+and set its subject to "Confirm your FocusFlow account".
 
 ## 2. Google sign-in
 

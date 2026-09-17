@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
-import { ChevronLeft, ChevronRight, CalendarDays, MousePointerClick } from 'lucide-react';
+import { ChevronLeft, ChevronRight, CalendarDays, MousePointerClick, Plus } from 'lucide-react';
 import { useStore } from '../store';
+import type { Task } from '../store';
 
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const MONTHS = [
@@ -16,7 +17,7 @@ function formatLocalDate(date: Date) {
 }
 
 export default function Calendar() {
-  const { tasks } = useStore();
+  const { tasks, addTask } = useStore();
   const today = new Date();
   const [viewDate, setViewDate] = useState(new Date(today.getFullYear(), today.getMonth(), 1));
 
@@ -82,6 +83,25 @@ export default function Calendar() {
     ? tasks.filter((t) => t.createdAt === selectedDate)
     : [];
 
+  const [newTaskText, setNewTaskText] = useState('');
+  const [newTaskPriority, setNewTaskPriority] = useState<NonNullable<Task['priority']>>('medium');
+
+  function handleAddForSelectedDay(event: React.FormEvent) {
+    event.preventDefault();
+    const text = newTaskText.trim();
+    if (!text || !selectedDate) return;
+    addTask(text, newTaskPriority, selectedDate);
+    setNewTaskText('');
+  }
+
+  const selectedDateLabel = selectedDate
+    ? new Date(selectedDate + 'T00:00:00').toLocaleDateString('en-US', {
+        weekday: 'long',
+        month: 'long',
+        day: 'numeric',
+      })
+    : null;
+
   return (
     <div className="animate-in">
       <div className="page-header">
@@ -135,23 +155,39 @@ export default function Calendar() {
 
         {/* Selected Date Tasks */}
         <div className="card">
-          <h3 style={{ marginBottom: '1rem' }}>
-            {selectedDate
-              ? new Date(selectedDate + 'T00:00:00').toLocaleDateString('en-US', {
-                  weekday: 'long',
-                  month: 'long',
-                  day: 'numeric',
-                })
-              : 'Select a date'}
-          </h3>
+          <h3 style={{ marginBottom: '1rem' }}>{selectedDateLabel ?? 'Select a date'}</h3>
+
+          {selectedDate && (
+            <form className="task-input-row" onSubmit={handleAddForSelectedDay} style={{ marginBottom: '1rem' }}>
+              <input
+                className="input"
+                placeholder={`Add a task for ${selectedDateLabel}`}
+                value={newTaskText}
+                onChange={(e) => setNewTaskText(e.target.value)}
+              />
+              <select
+                className="btn btn-ghost btn-sm"
+                value={newTaskPriority}
+                onChange={(e) => setNewTaskPriority(e.target.value as NonNullable<Task['priority']>)}
+                aria-label="Priority"
+                style={{ minWidth: '100px' }}
+              >
+                <option value="low">Low</option>
+                <option value="medium">Medium</option>
+                <option value="high">High</option>
+              </select>
+              <button className="btn btn-primary" type="submit" disabled={!newTaskText.trim()}>
+                <Plus size={16} />
+                Add
+              </button>
+            </form>
+          )}
 
           {selectedDate && selectedTasks.length === 0 ? (
             <div className="empty-state">
               <CalendarDays className="empty-state-icon" size={34} aria-hidden="true" />
               <div className="empty-state-title">No tasks on this day</div>
-              <div className="empty-state-desc">
-                Tasks you create will appear here on their creation date.
-              </div>
+              <div className="empty-state-desc">Add one above, or come back once you've planned it out.</div>
             </div>
           ) : selectedTasks.length > 0 ? (
             <div className="task-list">

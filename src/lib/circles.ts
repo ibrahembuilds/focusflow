@@ -11,7 +11,11 @@ export interface Circle {
   /** false (the default): anyone with the code joins instantly. true: the
    *  owner approves each request before it becomes membership. */
   requireApproval: boolean;
+  /** What this circle is for, ground rules, whatever the owner wants members to see. */
+  description: string | null;
 }
+
+export const CIRCLE_DESCRIPTION_MAX_LENGTH = 300;
 
 /** A task that lives in a circle: same shape as a personal task, plus who owns it. */
 export interface CircleTask extends Task {
@@ -43,6 +47,7 @@ interface CircleRow {
   invite_code: string;
   created_at: string;
   require_approval: boolean;
+  description: string | null;
 }
 
 interface CircleTaskRow {
@@ -81,6 +86,7 @@ function circleFromRow(row: CircleRow): Circle {
     inviteCode: row.invite_code,
     createdAt: row.created_at,
     requireApproval: row.require_approval ?? false,
+    description: row.description ?? null,
   };
 }
 
@@ -143,6 +149,7 @@ export async function createCircle(
   name: string,
   emoji: string,
   requireApproval = false,
+  description: string | null = null,
 ): Promise<Result<Circle>> {
   try {
     const { data, error } = await supabase.rpc('create_circle', {
@@ -151,17 +158,19 @@ export async function createCircle(
     });
     if (error) return { data: null, error: error.message };
     const circle = circleFromRow(data as CircleRow);
-    if (!requireApproval) return { data: circle, error: null };
 
-    // A second call rather than a third create_circle parameter: the RLS
+    const trimmedDescription = description?.trim() || null;
+    if (!requireApproval && !trimmedDescription) return { data: circle, error: null };
+
+    // A second call rather than more create_circle parameters: the RLS
     // policy that lets an owner update their own circle already covers this,
-    // so there's no need for a bespoke code path just to set one flag.
-    const { error: privacyError } = await supabase
+    // so there's no need for a bespoke code path just to set these.
+    const { error: updateError } = await supabase
       .from('circles')
-      .update({ require_approval: true })
+      .update({ require_approval: requireApproval, description: trimmedDescription })
       .eq('id', circle.id);
-    if (privacyError) return { data: null, error: privacyError.message };
-    return { data: { ...circle, requireApproval: true }, error: null };
+    if (updateError) return { data: null, error: updateError.message };
+    return { data: { ...circle, requireApproval, description: trimmedDescription }, error: null };
   } catch (cause) {
     return { data: null, error: messageOf(cause) };
   }
@@ -176,6 +185,26 @@ export async function setCircleRequireApproval(
     const { error } = await supabase
       .from('circles')
       .update({ require_approval: requireApproval })
+      .eq('id', circleId);
+    return { error: error?.message ?? null };
+  } catch (cause) {
+    return { error: messageOf(cause) };
+  }
+}
+
+/** The owner's free-text note about what this circle is for. */
+export async function setCircleDescription(
+  circleId: string,
+  description: string,
+): Promise<{ error: string | null }> {
+  const trimmed = description.trim();
+  if (trimmed.length > CIRCLE_DESCRIPTION_MAX_LENGTH) {
+    return { error: `Keep it under ${CIRCLE_DESCRIPTION_MAX_LENGTH} characters.` };
+  }
+  try {
+    const { error } = await supabase
+      .from('circles')
+      .update({ description: trimmed || null })
       .eq('id', circleId);
     return { error: error?.message ?? null };
   } catch (cause) {
@@ -232,6 +261,10 @@ export async function joinCircleByCode(code: string): Promise<Result<JoinAttempt
           invite_code: row.invite_code,
           created_at: row.created_at,
           require_approval: row.require_approval,
+          // join_circle_by_code() doesn't return this column — whoever reads
+          // this circle next (CircleDetail's own fetchCircle()) gets the
+          // real value; nothing reads it off this transient join result.
+          description: null,
         }),
       },
       error: null,

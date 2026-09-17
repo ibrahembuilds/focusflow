@@ -69,7 +69,8 @@ export interface FocusFlowState {
 
   // Tasks
   tasks: Task[];
-  addTask: (text: string, priority?: Task['priority']) => void;
+  /** `createdAt` defaults to today — pass a specific date (e.g. from the calendar) to schedule it there instead. */
+  addTask: (text: string, priority?: Task['priority'], createdAt?: string) => void;
   addTasks: (items: { text: string; priority?: Task['priority'] }[]) => void;
   toggleTask: (id: string) => void;
   deleteTask: (id: string) => void;
@@ -195,8 +196,15 @@ export const useStore = create<FocusFlowState>()(
       // ── Tasks ──
       tasks: [],
 
-      addTask: (text, priority = 'medium') => {
-        const newTask: Task = { id: uid(), text, completed: false, sessions: 0, createdAt: today(), priority };
+      addTask: (text, priority = 'medium', createdAt) => {
+        const newTask: Task = {
+          id: uid(),
+          text,
+          completed: false,
+          sessions: 0,
+          createdAt: createdAt ?? today(),
+          priority,
+        };
         set((s) => ({ tasks: [newTask, ...s.tasks] }));
         const userId = get().userId;
         if (userId) void saveTaskRemote(userId, newTask);

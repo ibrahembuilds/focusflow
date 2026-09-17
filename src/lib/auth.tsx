@@ -61,7 +61,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { error } = await supabase.auth.signUp({
       email,
       password,
-      options: Object.keys(data).length > 0 ? { data } : undefined,
+      options: {
+        ...(Object.keys(data).length > 0 ? { data } : {}),
+        // Without this, the confirmation email falls back to the project's
+        // bare Site URL — skipping ConfirmEmail.tsx entirely for every
+        // first-time signup, even though resendConfirmationEmail() below
+        // already gets this right for a resend.
+        emailRedirectTo: `${window.location.origin}/confirmed`,
+      },
     });
     return { error: error?.message ?? null };
   }
