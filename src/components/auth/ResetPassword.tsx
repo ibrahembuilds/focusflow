@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { AlertCircle, Check, CheckCircle2, Lock } from 'lucide-react';
+import { AlertCircle, Check, CheckCircle2, Lock, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../../lib/auth';
 import AuthLayout from './AuthLayout';
 import Seo from '../Seo';
@@ -12,6 +12,7 @@ export default function ResetPassword() {
 
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -107,12 +108,12 @@ export default function ResetPassword() {
 
         <div className="auth-field">
           <label htmlFor="new-password">New password</label>
-          <div className="auth-input-wrap">
+          <div className="auth-input-wrap has-toggle">
             <Lock size={16} aria-hidden="true" />
             <input
               id="new-password"
               className="input"
-              type="password"
+              type={showPassword ? 'text' : 'password'}
               autoComplete="new-password"
               required
               minLength={6}
@@ -121,6 +122,14 @@ export default function ResetPassword() {
               placeholder="At least 6 characters"
               autoFocus
             />
+            <button
+              type="button"
+              className="auth-toggle-visibility"
+              onClick={() => setShowPassword((v) => !v)}
+              aria-label={showPassword ? 'Hide characters' : 'Show characters'}
+            >
+              {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+            </button>
           </div>
         </div>
 
@@ -131,7 +140,7 @@ export default function ResetPassword() {
             <input
               id="confirm-password"
               className="input"
-              type="password"
+              type={showPassword ? 'text' : 'password'}
               autoComplete="new-password"
               required
               minLength={6}
