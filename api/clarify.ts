@@ -103,7 +103,7 @@ export default async function handler(request: Request): Promise<Response> {
   try {
     const response = await fetchOpenAI(
       {
-        model: process.env.OPENAI_MODEL || 'gpt-4o-mini',
+        model: process.env.OPENAI_MODEL || 'gpt-5.6-luna',
         messages: [
           { role: 'system', content: CLARIFY_PROMPT },
           { role: 'user', content: goal },
