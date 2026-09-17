@@ -23,7 +23,7 @@ export default function AuthLayout({
     <div className="auth-page">
       <div className="auth-visual" aria-hidden="true">
         <Link to="/" className="auth-visual-brand">
-          <img src="/brand/focusflow-logo.png" alt="" />
+          <img src="/brand/focusflow-mark.svg" alt="" />
           <span>FocusFlow</span>
         </Link>
         <div className="auth-visual-copy">
@@ -43,7 +43,7 @@ export default function AuthLayout({
       <div className="auth-form-side">
         <div className="auth-card">
           <Link to="/" className="auth-card-brand">
-            <img src="/brand/focusflow-logo.png" alt="" />
+            <img src="/brand/focusflow-mark.svg" alt="" />
             <span>FocusFlow</span>
           </Link>
           <p className="auth-eyebrow">{eyebrow}</p>

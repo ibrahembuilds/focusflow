@@ -42,7 +42,7 @@ export default function Sidebar() {
     <aside className="sidebar">
       <div className="sidebar-logo">
         <div className="sidebar-logo-icon">
-          <img src="/brand/focusflow-logo.png" alt="" className="sidebar-logo-image" />
+          <img src="/brand/focusflow-mark.svg" alt="" className="sidebar-logo-image" />
         </div>
         <div className="sidebar-logo-copy">
           <span className="sidebar-logo-text">FocusFlow</span>

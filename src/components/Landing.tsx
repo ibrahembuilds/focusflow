@@ -127,7 +127,7 @@ export default function Landing() {
       <header className="landing-nav">
         <div className="landing-nav-inner">
           <Link to="/" className="landing-brand">
-            <img src="/brand/focusflow-logo.png" alt="" />
+            <img src="/brand/focusflow-mark.svg" alt="" />
             <span>FocusFlow</span>
           </Link>
 
@@ -302,7 +302,7 @@ export default function Landing() {
       <footer className="landing-footer">
         <div className="landing-footer-inner">
           <div className="landing-brand">
-            <img src="/brand/focusflow-logo.png" alt="" />
+            <img src="/brand/focusflow-mark.svg" alt="" />
             <span>FocusFlow</span>
           </div>
           <p>&copy; {new Date().getFullYear()} FocusFlow. Made for focused work.</p>

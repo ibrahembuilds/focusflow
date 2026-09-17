@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="public/brand/focusflow-logo.png" alt="FocusFlow" width="64" height="64" />
+  <img src="public/brand/focusflow-mark.svg" alt="FocusFlow" width="64" height="64" />
 </p>
 
 <h1 align="center">FocusFlow</h1>

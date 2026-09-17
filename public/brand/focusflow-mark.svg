@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">FocusFlow mark</title>
+  <desc id="desc">A focused path flowing into a completed check mark.</desc>
+  <rect width="512" height="512" rx="132" fill="#194C37"/>
+  <circle cx="256" cy="256" r="154" fill="none" stroke="#F4F7F5" stroke-width="44" stroke-linecap="round" stroke-dasharray="735 233" transform="rotate(-42 256 256)"/>
+  <path d="M166 266l66 66 124-142" fill="none" stroke="#A9D4BD" stroke-width="46" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="369" cy="133" r="23" fill="#D6A052"/>
+</svg>
