@@ -146,7 +146,7 @@ export default async (request: Request) => {
   try {
     const response = await fetchOpenAI(
       {
-        model: Deno.env.get('OPENAI_MODEL') || 'gpt-4o-mini',
+        model: Deno.env.get('OPENAI_MODEL') || 'gpt-5.6-luna',
         messages: [
           { role: 'system', content: DECOMPOSE_PROMPT },
           { role: 'user', content: userContent },
