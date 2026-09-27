@@ -1,0 +1,742 @@
+<title>FocusFlow in Motion</title>
+<meta name="description" content="A 66-second motion graphic explaining what FocusFlow is and how to use it.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&family=Figtree:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap">
+<style>
+  :root {
+    --page-bg: #eef3f0;
+    --page-text: #18231e;
+    --page-muted: #53625a;
+    --ctrl-bg: #fbfcfb;
+    --ctrl-border: #d4ddd7;
+    --ctrl-accent: #2f7d5a;
+    /* Stage palette: fixed, it is the video frame (FocusFlow brand tokens) */
+    --ff-ink: #0e1b15;
+    --ff-forest: #194c37;
+    --ff-pine: #215f45;
+    --ff-green: #2f7d5a;
+    --ff-leaf: #56b98a;
+    --ff-mint: #a9d4bd;
+    --ff-mist: #f4f7f5;
+    --ff-gold: #d6a052;
+    --ff-red: #e07a6a;
+    --ff-surface: #fbfcfb;
+    --ff-line: #e3e9e5;
+    --ff-text: #18231e;
+    --ff-text-2: #53625a;
+    --ff-text-3: #748279;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --page-bg: #0b1511;
+      --page-text: #e6eee9;
+      --page-muted: #9aaba1;
+      --ctrl-bg: #13221b;
+      --ctrl-border: #2a3d33;
+      --ctrl-accent: #56b98a;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --page-bg: #0b1511;
+    --page-text: #e6eee9;
+    --page-muted: #9aaba1;
+    --ctrl-bg: #13221b;
+    --ctrl-border: #2a3d33;
+    --ctrl-accent: #56b98a;
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--page-bg);
+    color: var(--page-text);
+    font-family: "Figtree", "Segoe UI", system-ui, sans-serif;
+    padding: 24px 16px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+  }
+  .player { width: 100%; max-width: 1280px; display: flex; flex-direction: column; gap: 10px; }
+  .viewport {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    max-width: 100%;
+    overflow: hidden;
+    border-radius: 14px;
+    background: var(--ff-ink);
+    box-shadow: 0 18px 48px rgb(10 30 20 / 0.25);
+  }
+  .controls { display: flex; align-items: center; gap: 12px; }
+  .controls button {
+    font: 600 14px/1 "Figtree", system-ui, sans-serif;
+    color: var(--page-text);
+    background: var(--ctrl-bg);
+    border: 1px solid var(--ctrl-border);
+    border-radius: 9px;
+    padding: 9px 14px;
+    cursor: pointer;
+    min-width: 76px;
+  }
+  .controls button:focus-visible, .controls input:focus-visible { outline: 2px solid var(--ctrl-accent); outline-offset: 2px; }
+  #scrub { flex: 1; accent-color: var(--ctrl-accent); min-width: 0; }
+  #clock { font: 500 13px/1 "JetBrains Mono", Consolas, monospace; color: var(--page-muted); font-variant-numeric: tabular-nums; }
+  .chapters { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chapters button {
+    font: 500 12.5px/1 "Figtree", system-ui, sans-serif;
+    color: var(--page-muted);
+    background: transparent;
+    border: 1px solid var(--ctrl-border);
+    border-radius: 999px;
+    padding: 6px 11px;
+    cursor: pointer;
+  }
+  .chapters button.on { color: var(--page-text); border-color: var(--ctrl-accent); }
+
+  /* capture mode: just the stage, full window */
+  body.capture { padding: 0; margin: 0; background: #000; }
+  body.capture .controls, body.capture .chapters { display: none; }
+  body.capture .player { max-width: none; width: 1920px; }
+  body.capture .viewport { border-radius: 0; box-shadow: none; width: 1920px; height: 1080px; }
+
+  /* ---------- STAGE (1920x1080 design space) ---------- */
+  #stage {
+    position: absolute; left: 0; top: 0;
+    width: 1920px; height: 1080px;
+    transform-origin: 0 0;
+    overflow: hidden;
+    background: radial-gradient(1200px 800px at 78% 40%, #1d5840 0%, #143f2e 45%, #0e2a1f 100%);
+    color: var(--ff-mist);
+    font-family: "Figtree", "Segoe UI", system-ui, sans-serif;
+  }
+  .grain { position: absolute; inset: 0; background-image: radial-gradient(rgb(255 255 255 / 0.035) 1px, transparent 1px); background-size: 26px 26px; }
+  .scene { position: absolute; inset: 0; opacity: 0; }
+  .abs { position: absolute; }
+  .display { font-family: "Sora", "Segoe UI", sans-serif; letter-spacing: -0.02em; }
+  .mono { font-family: "JetBrains Mono", Consolas, monospace; }
+
+  /* left copy column shared by step scenes */
+  .copy { position: absolute; left: 130px; top: 300px; width: 600px; }
+  .step-tag {
+    display: inline-flex; align-items: center; gap: 12px;
+    font: 600 22px/1 "Figtree", sans-serif; text-transform: uppercase; letter-spacing: 0.14em;
+    color: var(--ff-gold);
+  }
+  .step-tag b { display: inline-grid; place-items: center; width: 44px; height: 44px; border-radius: 50%; background: var(--ff-gold); color: var(--ff-forest); letter-spacing: 0; font-size: 22px; }
+  .copy h2 { margin: 26px 0 0; font: 700 76px/1.02 "Sora", sans-serif; letter-spacing: -0.03em; color: var(--ff-mist); }
+  .copy p { margin: 26px 0 0; font: 500 30px/1.4 "Figtree", sans-serif; color: var(--ff-mint); max-width: 560px; }
+
+  /* app window */
+  .win {
+    position: absolute; left: 800px; top: 150px; width: 1000px; height: 780px;
+    background: var(--ff-surface); border-radius: 22px; overflow: hidden;
+    box-shadow: 0 40px 120px rgb(0 0 0 / 0.45), 0 0 0 1px rgb(255 255 255 / 0.06);
+    color: var(--ff-text);
+  }
+  .win-bar { height: 50px; display: flex; align-items: center; gap: 9px; padding: 0 20px; background: #eef3f0; border-bottom: 1px solid var(--ff-line); }
+  .win-bar i { width: 13px; height: 13px; border-radius: 50%; background: #d4ddd7; display: block; }
+  .win-bar .url { margin-left: 18px; font: 500 16px/1 "JetBrains Mono", monospace; color: var(--ff-text-3); background: #fff; padding: 8px 14px; border-radius: 8px; border: 1px solid var(--ff-line); }
+  .win-body { position: absolute; top: 50px; left: 0; right: 0; bottom: 0; display: flex; }
+  .side { width: 210px; background: #f4f7f5; border-right: 1px solid var(--ff-line); padding: 22px 14px; display: flex; flex-direction: column; gap: 6px; }
+  .side .brand { display: flex; align-items: center; gap: 10px; font: 700 19px/1 "Sora", sans-serif; margin: 0 6px 18px; color: var(--ff-forest); }
+  .side .brand svg { width: 30px; height: 30px; }
+  .nav { font: 600 16px/1 "Figtree", sans-serif; color: var(--ff-text-2); padding: 11px 12px; border-radius: 9px; }
+  .nav.on { background: #dcebe3; color: var(--ff-forest); }
+  .main { flex: 1; padding: 34px 38px; position: relative; }
+  .main h3 { margin: 0; font: 700 30px/1.1 "Sora", sans-serif; letter-spacing: -0.02em; color: var(--ff-text); }
+  .main .sub { margin-top: 8px; font: 500 17px/1.4 "Figtree", sans-serif; color: var(--ff-text-3); }
+  .field { border: 1.5px solid #d4ddd7; border-radius: 12px; padding: 16px 18px; font: 500 20px/1.35 "Figtree", sans-serif; color: var(--ff-text); background: #fff; min-height: 58px; }
+  .field.focus { border-color: var(--ff-green); box-shadow: 0 0 0 4px rgb(47 125 90 / 0.16); }
+  .caret { display: inline-block; width: 2px; height: 1.1em; background: var(--ff-green); vertical-align: -3px; margin-left: 1px; }
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 10px; border-radius: 12px; font: 700 19px/1 "Figtree", sans-serif; padding: 18px 24px; }
+  .btn-primary { background: var(--ff-green); color: #fff; }
+  .btn-ghost { background: #fff; color: var(--ff-text); border: 1.5px solid #d4ddd7; }
+  .pill { font: 700 13px/1 "Figtree", sans-serif; text-transform: uppercase; letter-spacing: 0.08em; padding: 7px 10px; border-radius: 999px; }
+  .p-high { background: #fbe4df; color: #b04535; }
+  .p-medium { background: #f7ead3; color: #8a5109; }
+  .p-low { background: #dcebe3; color: #256849; }
+  .task { position: absolute; left: 38px; right: 38px; height: 70px; display: flex; align-items: center; gap: 16px; padding: 0 20px; background: #fff; border: 1.5px solid var(--ff-line); border-radius: 14px; font: 600 20px/1.2 "Figtree", sans-serif; }
+  .task .grip { color: #b9c7be; font: 700 20px/1 "JetBrains Mono", monospace; letter-spacing: -3px; }
+  .task .box { width: 26px; height: 26px; border-radius: 8px; border: 2px solid #b9c7be; display: grid; place-items: center; flex: none; }
+  .task .box svg { width: 16px; height: 16px; }
+  .task .txt { flex: 1; position: relative; }
+  .task .strike { position: absolute; left: 0; top: 52%; height: 2px; background: var(--ff-text-3); }
+  .cursor { position: absolute; width: 34px; height: 34px; z-index: 20; filter: drop-shadow(0 4px 8px rgb(0 0 0 / 0.35)); }
+
+  .caption {
+    position: absolute; left: 130px; bottom: 70px;
+    font: 600 22px/1 "Figtree", sans-serif; color: rgb(244 247 245 / 0.55); letter-spacing: 0.04em;
+  }
+  .progress { position: absolute; left: 0; bottom: 0; height: 6px; background: var(--ff-gold); }
+
+  @media (prefers-reduced-motion: reduce) {
+    .viewport { box-shadow: none; }
+  }
+</style>
+
+<div class="player">
+  <div class="viewport" id="viewport">
+    <div id="stage">
+      <div class="grain"></div>
+
+      <!-- S0 INTRO -->
+      <div class="scene" id="s0">
+        <svg class="abs" id="intro-mark" style="left:810px;top:230px;width:300px;height:300px" viewBox="0 0 512 512">
+          <rect id="im-bg" width="512" height="512" rx="132" fill="#194C37"/>
+          <circle id="im-ring" cx="256" cy="256" r="154" fill="none" stroke="#F4F7F5" stroke-width="44" stroke-linecap="round" transform="rotate(-42 256 256)"/>
+          <path id="im-check" d="M166 266l66 66 124-142" fill="none" stroke="#A9D4BD" stroke-width="46" stroke-linecap="round" stroke-linejoin="round"/>
+          <circle id="im-dot" cx="369" cy="133" r="23" fill="#D6A052"/>
+        </svg>
+        <div class="abs display" id="intro-word" style="left:0;right:0;top:580px;text-align:center;font-weight:700;font-size:120px;color:#f4f7f5">FocusFlow</div>
+        <div class="abs" id="intro-tag" style="left:0;right:0;top:740px;text-align:center;font:500 38px/1.3 Figtree,sans-serif;color:#a9d4bd">Decompose goals. Focus deep. Track progress.</div>
+      </div>
+
+      <!-- S1 PROBLEM -->
+      <div class="scene" id="s1">
+        <div id="chaos"></div>
+        <div class="abs display" id="prob-q" style="left:0;right:0;top:420px;text-align:center;font-weight:700;font-size:92px;color:#f4f7f5">Too much in your head?</div>
+        <div class="abs" id="prob-a" style="left:0;right:0;top:560px;text-align:center;font:500 42px/1.3 Figtree,sans-serif;color:#a9d4bd">FocusFlow turns a messy goal into a plan you can finish.</div>
+      </div>
+
+      <!-- S2 SIGN UP -->
+      <div class="scene" id="s2">
+        <div class="copy">
+          <div class="step-tag"><b>1</b>Get started</div>
+          <h2>Create your free account</h2>
+          <p>Sign up with email or Google. You get your own public @handle.</p>
+        </div>
+        <div class="win" id="w2">
+          <div class="win-bar"><i></i><i></i><i></i><span class="url">focusflowai.site/signup</span></div>
+          <div class="abs" style="left:250px;top:110px;width:500px">
+            <div style="font:700 36px/1.1 Sora,sans-serif;letter-spacing:-.02em">Create your account</div>
+            <div style="margin-top:10px;font:500 18px/1.4 Figtree,sans-serif;color:#748279">Your tasks and sessions sync to every device.</div>
+            <div class="btn btn-ghost" id="g-btn" style="margin-top:34px;width:100%">
+              <svg width="22" height="22" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9 3.5l6.7-6.7C35.6 2.4 30.2 0 24 0 14.6 0 6.6 5.4 2.7 13.3l7.8 6C12.4 13.7 17.7 9.5 24 9.5z"/><path fill="#4285F4" d="M46.1 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.4c-.5 2.9-2.2 5.3-4.6 6.9l7.4 5.7c4.3-4 6.9-9.9 6.9-17.1z"/><path fill="#FBBC05" d="M10.5 28.7c-.5-1.4-.8-3-.8-4.7s.3-3.2.8-4.7l-7.8-6C1 16.6 0 20.2 0 24s1 7.4 2.7 10.7l7.8-6z"/><path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.4-5.7c-2.1 1.4-4.8 2.3-8.5 2.3-6.3 0-11.6-4.2-13.5-9.9l-7.8 6C6.6 42.6 14.6 48 24 48z"/></svg>
+              Continue with Google
+            </div>
+            <div style="margin:26px 0;display:flex;align-items:center;gap:14px;color:#748279;font:500 16px Figtree,sans-serif"><span style="flex:1;height:1px;background:#e3e9e5"></span>or<span style="flex:1;height:1px;background:#e3e9e5"></span></div>
+            <div style="font:600 15px Figtree,sans-serif;color:#53625a;margin-bottom:8px">Username</div>
+            <div class="field" id="su-handle"></div>
+            <div style="font:600 15px Figtree,sans-serif;color:#53625a;margin:18px 0 8px">Email</div>
+            <div class="field" id="su-email"></div>
+            <div class="btn btn-primary" id="su-btn" style="margin-top:28px;width:100%">Create account</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- S3 AI BREAKDOWN -->
+      <div class="scene" id="s3">
+        <div class="copy">
+          <div class="step-tag"><b>2</b>AI breakdown</div>
+          <h2>Paste any big goal</h2>
+          <p id="s3-p">AI asks a few quick questions, then builds a step-by-step roadmap.</p>
+        </div>
+        <div class="win">
+          <div class="win-bar"><i></i><i></i><i></i><span class="url">focusflowai.site/app/ai-decompose</span></div>
+          <div class="win-body">
+            <div class="side" data-on="AI breakdown"></div>
+            <div class="main">
+              <div id="ai-a">
+                <h3>What's your goal?</h3>
+                <div class="sub">Be as specific or vague as you want.</div>
+                <div class="field" id="ai-goal" style="margin-top:24px;min-height:110px"></div>
+                <div class="btn btn-primary" id="ai-continue" style="margin-top:20px;width:100%">Continue →</div>
+              </div>
+              <div id="ai-b" class="abs" style="left:38px;right:38px;top:34px">
+                <h3>A few quick questions</h3>
+                <div class="sub">For: <b style="color:#53625a">Launch a Shopify store selling handmade candles</b></div>
+                <div style="margin-top:22px;font:600 17px Figtree,sans-serif;color:#18231e">Have you made and priced your candles yet?</div>
+                <div class="field" id="ai-q1" style="margin-top:8px"></div>
+                <div style="margin-top:18px;font:600 17px Figtree,sans-serif;color:#18231e">When do you want to launch?</div>
+                <div class="field" id="ai-q2" style="margin-top:8px"></div>
+                <div class="btn btn-primary" id="ai-gen" style="margin-top:22px;width:100%">✦ Generate Roadmap</div>
+              </div>
+              <div id="ai-c" class="abs" style="left:0;right:0;top:34px;bottom:0">
+                <div style="padding:0 38px"><h3>Your roadmap</h3><div class="sub">7 tasks added to your list</div></div>
+                <div id="roadmap"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- S4 TASKS -->
+      <div class="scene" id="s4">
+        <div class="copy">
+          <div class="step-tag"><b>3</b>Organize</div>
+          <h2>Drag to prioritize. Tick to finish.</h2>
+          <p>Every task has a priority. Reorder by dragging, check it off when it is done.</p>
+        </div>
+        <div class="win">
+          <div class="win-bar"><i></i><i></i><i></i><span class="url">focusflowai.site/app/tasks</span></div>
+          <div class="win-body">
+            <div class="side" data-on="Tasks"></div>
+            <div class="main">
+              <h3>Tasks</h3>
+              <div class="sub" id="t-count">5 open · 0 done today</div>
+              <div id="tasklist" class="abs" style="left:0;right:0;top:130px;bottom:0"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- S5 TIMER -->
+      <div class="scene" id="s5">
+        <div class="copy">
+          <div class="step-tag"><b>4</b>Focus</div>
+          <h2>Start a focus session</h2>
+          <p>Pick 25, 45 or 60 minutes, or set your own. A 5-minute break follows.</p>
+        </div>
+        <div class="win">
+          <div class="win-bar"><i></i><i></i><i></i><span class="url">focusflowai.site/app/timer</span></div>
+          <div class="win-body">
+            <div class="side" data-on="Focus timer"></div>
+            <div class="main" style="display:flex;flex-direction:column;align-items:center">
+              <div id="tm-mode" style="font:700 16px Figtree,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:#2f7d5a;margin-top:6px">Focus</div>
+              <div style="position:relative;width:420px;height:420px;margin-top:14px">
+                <svg width="420" height="420" viewBox="0 0 420 420">
+                  <circle cx="210" cy="210" r="180" fill="none" stroke="#e3e9e5" stroke-width="22"/>
+                  <circle id="tm-ring" cx="210" cy="210" r="180" fill="none" stroke="#2f7d5a" stroke-width="22" stroke-linecap="round" transform="rotate(-90 210 210)" stroke-dasharray="1131" stroke-dashoffset="1131"/>
+                </svg>
+                <div id="tm-time" class="abs mono" style="inset:0;display:grid;place-items:center;font-size:96px;font-weight:700;color:#18231e;font-variant-numeric:tabular-nums">25:00</div>
+              </div>
+              <div style="display:flex;gap:12px;margin-top:26px" id="tm-presets">
+                <div class="btn btn-ghost" data-m="25">25m</div>
+                <div class="btn btn-ghost" data-m="45">45m</div>
+                <div class="btn btn-ghost" data-m="60">60m</div>
+                <div class="btn btn-primary" id="tm-start" style="min-width:150px">Start</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- S6 TRACK -->
+      <div class="scene" id="s6">
+        <div class="copy">
+          <div class="step-tag"><b>5</b>Track</div>
+          <h2>See your progress</h2>
+          <p>Dashboard, analytics and a calendar show your sessions, streak and finished work.</p>
+        </div>
+        <div class="win">
+          <div class="win-bar"><i></i><i></i><i></i><span class="url">focusflowai.site/app</span></div>
+          <div class="win-body">
+            <div class="side" data-on="Dashboard"></div>
+            <div class="main">
+              <h3>Dashboard</h3>
+              <div class="sub">Example week</div>
+              <div id="stats" style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:22px"></div>
+              <div style="margin-top:22px;border:1.5px solid #e3e9e5;border-radius:14px;padding:20px 22px;height:370px;position:relative">
+                <div style="font:700 18px Figtree,sans-serif">Focus sessions this week</div>
+                <div id="bars" class="abs" style="left:22px;right:22px;bottom:18px;height:280px"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- S7 CIRCLES -->
+      <div class="scene" id="s7">
+        <div class="copy">
+          <div class="step-tag"><b>6</b>Circles</div>
+          <h2>Work alongside friends</h2>
+          <p>Share a 6-character invite code. See each other's 7-day streaks, never each other's task text.</p>
+        </div>
+        <div class="win">
+          <div class="win-bar"><i></i><i></i><i></i><span class="url">focusflowai.site/app/circles</span></div>
+          <div class="win-body">
+            <div class="side" data-on="Circles"></div>
+            <div class="main">
+              <h3>Biology finals</h3>
+              <div class="sub">Invite code</div>
+              <div id="code" style="display:flex;gap:10px;margin-top:12px"></div>
+              <div style="margin-top:30px;font:700 18px Figtree,sans-serif">Streaks together</div>
+              <div id="streaks" style="margin-top:12px;display:flex;flex-direction:column;gap:12px"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- S8 PROFILE -->
+      <div class="scene" id="s8">
+        <div class="copy">
+          <div class="step-tag"><b>7</b>Share</div>
+          <h2>Your profile card</h2>
+          <p>A public link at /u/yourname. You choose which numbers it shows.</p>
+        </div>
+        <div class="abs" id="card" style="left:960px;top:230px;width:700px;height:620px;background:#fbfcfb;border-radius:28px;box-shadow:0 40px 120px rgb(0 0 0 / .45);color:#18231e;padding:48px">
+          <div style="display:flex;align-items:center;gap:26px">
+            <div style="width:120px;height:120px;border-radius:50%;background:#dcebe3;display:grid;place-items:center;font:700 52px Sora,sans-serif;color:#194c37">Y</div>
+            <div>
+              <div style="font:700 42px/1.1 Sora,sans-serif;letter-spacing:-.02em">Your Name</div>
+              <div class="mono" style="font-size:22px;color:#2f7d5a;margin-top:8px">@yourname</div>
+            </div>
+          </div>
+          <div style="margin-top:26px;font:500 22px/1.45 Figtree,sans-serif;color:#53625a">Studying for finals, one focus session at a time.</div>
+          <div id="pstats" style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:40px"></div>
+          <div class="mono" style="margin-top:40px;padding:16px 20px;background:#eef3f0;border-radius:12px;font-size:20px;color:#53625a">focusflowai.site/u/yourname</div>
+        </div>
+      </div>
+
+      <!-- S9 OUTRO -->
+      <div class="scene" id="s9">
+        <svg class="abs" id="out-mark" style="left:870px;top:250px;width:180px;height:180px" viewBox="0 0 512 512">
+          <rect width="512" height="512" rx="132" fill="#194C37" stroke="#2f7d5a" stroke-width="6"/>
+          <circle cx="256" cy="256" r="154" fill="none" stroke="#F4F7F5" stroke-width="44" stroke-linecap="round" stroke-dasharray="735 233" transform="rotate(-42 256 256)"/>
+          <path d="M166 266l66 66 124-142" fill="none" stroke="#A9D4BD" stroke-width="46" stroke-linecap="round" stroke-linejoin="round"/>
+          <circle cx="369" cy="133" r="23" fill="#D6A052"/>
+        </svg>
+        <div class="abs display" id="out-h" style="left:0;right:0;top:470px;text-align:center;font-weight:700;font-size:96px;color:#f4f7f5">Goal → Plan → Focus → Done.</div>
+        <div class="abs" id="out-steps" style="left:0;right:0;top:610px;text-align:center;font:500 34px Figtree,sans-serif;color:#a9d4bd">Break it down · Organize · Focus · Track · Share</div>
+        <div class="abs mono" id="out-url" style="left:50%;top:720px;transform:translateX(-50%);font-size:40px;font-weight:700;color:#194c37;background:#d6a052;padding:22px 40px;border-radius:16px;white-space:nowrap">focusflowai.site</div>
+      </div>
+
+      <div class="caption" id="caption"></div>
+      <div class="progress" id="bar"></div>
+    </div>
+  </div>
+  <div class="controls">
+    <button id="play" type="button">Pause</button>
+    <input id="scrub" type="range" min="0" max="66" step="0.01" value="0" aria-label="Seek">
+    <span id="clock">0:00 / 1:06</span>
+  </div>
+  <div class="chapters" id="chapters"></div>
+</div>
+
+<script>
+(() => {
+  const DUR = 66;
+  const $ = (id) => document.getElementById(id);
+  const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+  const prog = (t, a, b) => clamp((t - a) / (b - a));
+  const eOut = (x) => 1 - Math.pow(1 - x, 3);
+  const eInOut = (x) => (x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2);
+  const eBack = (x) => { const c = 1.7; return 1 + (c + 1) * Math.pow(x - 1, 3) + c * Math.pow(x - 1, 2); };
+  const lerp = (a, b, x) => a + (b - a) * x;
+  const type = (str, x) => str.slice(0, Math.round(str.length * clamp(x)));
+
+  // Scene windows [start, end]
+  const S = {
+    s0: [0, 5.5], s1: [5.5, 10.5], s2: [10.5, 17], s3: [17, 29], s4: [29, 36.5],
+    s5: [36.5, 45], s6: [45, 51.5], s7: [51.5, 58], s8: [58, 62], s9: [62, 66],
+  };
+  const CHAPTERS = [
+    ['Intro', 0], ['Sign up', 10.5], ['AI breakdown', 17], ['Tasks', 29], ['Focus timer', 36.5],
+    ['Track', 45], ['Circles', 51.5], ['Profile', 58], ['Start', 62],
+  ];
+
+  // ---------- build repeated DOM ----------
+  const MARK = '<svg viewBox="0 0 512 512"><rect width="512" height="512" rx="132" fill="#194C37"/><circle cx="256" cy="256" r="154" fill="none" stroke="#F4F7F5" stroke-width="44" stroke-linecap="round" stroke-dasharray="735 233" transform="rotate(-42 256 256)"/><path d="M166 266l66 66 124-142" fill="none" stroke="#A9D4BD" stroke-width="46" stroke-linecap="round" stroke-linejoin="round"/><circle cx="369" cy="133" r="23" fill="#D6A052"/></svg>';
+  const NAV = ['Dashboard', 'Focus timer', 'Tasks', 'Calendar', 'Analytics', 'Circles', 'AI breakdown'];
+  document.querySelectorAll('.side').forEach((el) => {
+    el.innerHTML = `<div class="brand">${MARK}FocusFlow</div>` +
+      NAV.map((n) => `<div class="nav${n === el.dataset.on ? ' on' : ''}">${n}</div>`).join('');
+  });
+
+  const CURSOR = '<svg class="cursor" viewBox="0 0 24 24"><path d="M4 2l16 10-7 1.5L9.5 21z" fill="#fff" stroke="#18231e" stroke-width="1.5" stroke-linejoin="round"/></svg>';
+  ['s2', 's3', 's4', 's5'].forEach((s) => { $(s).insertAdjacentHTML('beforeend', CURSOR.replace('class="cursor"', `class="cursor" id="cur-${s}"`)); });
+
+  const chaosWords = ['launch the store', 'reply to emails', 'study for finals', 'gym?', 'that side project', 'pricing', 'call supplier', 'read chapter 4', 'logo??', 'taxes', 'plan the week', 'write the essay'];
+  $('chaos').innerHTML = chaosWords.map((w, i) => `<div class="abs" data-i="${i}" style="font:600 ${30 + (i % 4) * 8}px Figtree,sans-serif;color:rgb(244 247 245 / .8);white-space:nowrap">${w}</div>`).join('');
+
+  const ROAD = [
+    ['Finalize candle scents and pricing', 'high'],
+    ['Photograph products on a clean background', 'high'],
+    ['Set up Shopify store and theme', 'high'],
+    ['Write product descriptions', 'medium'],
+    ['Configure shipping and taxes', 'medium'],
+    ['Create launch post for Instagram', 'medium'],
+    ['Email 20 friends for first reviews', 'low'],
+  ];
+  const BOX = '<span class="box"><svg viewBox="0 0 16 16"><path d="M3 8.5l3.2 3L13 4.5" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></span>';
+  $('roadmap').innerHTML = ROAD.map(([t, p], i) =>
+    `<div class="task" style="top:${100 + i * 82}px;height:68px">${BOX}<span class="txt">${t}</span><span class="pill p-${p}">${p}</span></div>`).join('');
+
+  const TASKS = [
+    ['Set up Shopify store and theme', 'high'],
+    ['Write product descriptions', 'medium'],
+    ['Configure shipping and taxes', 'medium'],
+    ['Finalize candle scents and pricing', 'high'],
+    ['Email 20 friends for first reviews', 'low'],
+  ];
+  $('tasklist').innerHTML = TASKS.map(([t, p], i) =>
+    `<div class="task" data-i="${i}"><span class="grip">⋮⋮</span>${BOX}<span class="txt">${t}<span class="strike"></span></span><span class="pill p-${p}">${p}</span></div>`).join('');
+
+  const STATS = [['Focus time', 510, (v) => `${Math.floor(v / 60)}h ${String(Math.round(v % 60)).padStart(2, '0')}m`], ['Sessions', 17, (v) => Math.round(v)], ['Day streak', 6, (v) => Math.round(v)]];
+  $('stats').innerHTML = STATS.map(([l], i) => `<div style="border:1.5px solid #e3e9e5;border-radius:14px;padding:18px 20px"><div style="font:600 15px Figtree,sans-serif;color:#748279">${l}</div><div class="mono" data-s="${i}" style="font-size:38px;font-weight:700;margin-top:8px;color:#194c37;font-variant-numeric:tabular-nums">0</div></div>`).join('');
+  const WEEK = [['Mon', 2], ['Tue', 3], ['Wed', 1], ['Thu', 4], ['Fri', 3], ['Sat', 1], ['Sun', 3]];
+  $('bars').innerHTML = WEEK.map(([d, v], i) =>
+    `<div class="abs" style="left:${i * 14.28 + 2}%;width:10%;bottom:30px;top:0"><div data-b="${i}" class="abs" style="left:0;right:0;bottom:0;border-radius:8px 8px 3px 3px;background:${i === 3 ? '#2f7d5a' : '#a9d4bd'}"></div><div class="abs mono" data-bv="${i}" style="left:0;right:0;text-align:center;font-size:17px;color:#53625a"></div></div>` +
+    `<div class="abs" style="left:${i * 14.28 + 2}%;width:10%;bottom:0;text-align:center;font:600 15px Figtree,sans-serif;color:#748279">${d}</div>`).join('');
+
+  $('code').innerHTML = 'A1B2C3'.split('').map((c, i) => `<div class="mono" data-c="${i}" style="width:66px;height:80px;border-radius:12px;background:#eef3f0;border:1.5px solid #d4ddd7;display:grid;place-items:center;font-size:40px;font-weight:700;color:#194c37">${c}</div>`).join('');
+  const MEMBERS = [['You', '@yourname', '#2f7d5a', [1, 1, 0, 1, 1, 1, 1], '3 done today · 2 sessions · 50m focused'], ['Sara', '@sara', '#d6a052', [1, 1, 1, 1, 0, 1, 1], '2 done today · 1 session · 25m focused'], ['Omar', '@omar', '#5a8fd6', [0, 1, 1, 1, 1, 1, 1], '4 done today · 3 sessions · 1h 15m focused']];
+  $('streaks').innerHTML = MEMBERS.map(([n, h, c, days, line], r) =>
+    `<div data-m="${r}" style="display:flex;align-items:center;gap:16px;border:1.5px solid #e3e9e5;border-radius:14px;padding:14px 18px"><div style="width:48px;height:48px;border-radius:50%;background:${c};color:#fff;display:grid;place-items:center;font:700 20px Sora,sans-serif">${n[0]}</div><div style="flex:1"><div style="font:700 18px Figtree,sans-serif">${n} <span class="mono" style="font-size:14px;color:#748279;font-weight:500">${h}</span></div><div style="font:500 14px Figtree,sans-serif;color:#748279;margin-top:4px">${line}</div></div><div style="display:flex;gap:7px">${days.map((d, i) => `<span data-d="${r}-${i}" data-on="${d}" style="width:22px;height:22px;border-radius:6px;background:#e3e9e5"></span>`).join('')}</div></div>`).join('');
+
+  const PST = [['Day streak', '6'], ['Focus time', '8h 30m'], ['Tasks done', '42']];
+  $('pstats').innerHTML = PST.map(([l, v]) => `<div style="background:#eef3f0;border-radius:14px;padding:18px"><div class="mono" style="font-size:34px;font-weight:700;color:#194c37">${v}</div><div style="font:600 15px Figtree,sans-serif;color:#748279;margin-top:6px">${l}</div></div>`).join('');
+
+  const ringLen = 2 * Math.PI * 154;
+  $('im-ring').setAttribute('stroke-dasharray', `${ringLen} ${ringLen}`);
+  const checkLen = $('im-check').getTotalLength();
+  $('im-check').setAttribute('stroke-dasharray', `${checkLen} ${checkLen}`);
+
+  // ---------- helpers ----------
+  const sceneAlpha = (t, [a, b]) => {
+    if (t < a - 0.001 || t > b + 0.001) return 0;
+    const fi = a === 0 ? 1 : prog(t, a, a + 0.5);
+    const fo = b === DUR ? 1 : 1 - prog(t, b - 0.45, b);
+    return Math.min(fi, fo);
+  };
+  const setCursor = (id, keys, t) => {
+    // keys: [time, x, y, click?]
+    const el = $(id);
+    let x = keys[0][1], y = keys[0][2], click = 0;
+    for (let i = 0; i < keys.length - 1; i++) {
+      const [ta, xa, ya] = keys[i], [tb, xb, yb] = keys[i + 1];
+      if (t >= ta && t <= tb) { const k = eInOut(prog(t, ta, tb)); x = lerp(xa, xb, k); y = lerp(ya, yb, k); }
+      else if (t > tb) { x = xb; y = yb; }
+    }
+    keys.forEach(([tk, , , c]) => { if (c && t >= tk && t < tk + 0.25) click = 1; });
+    el.style.transform = `translate(${x}px, ${y}px) scale(${click ? 0.82 : 1})`;
+  };
+  const copyIn = (sid, t, a) => {
+    const c = $(sid).querySelector('.copy');
+    [...c.children].forEach((el, i) => {
+      const k = eOut(prog(t, a + 0.15 + i * 0.18, a + 0.85 + i * 0.18));
+      el.style.opacity = k; el.style.transform = `translateY(${(1 - k) * 34}px)`;
+    });
+    const w = $(sid).querySelector('.win, #card');
+    if (w) { const k = eOut(prog(t, a + 0.1, a + 1.0)); w.style.opacity = k; w.style.transform = `translateX(${(1 - k) * 90}px) scale(${0.96 + 0.04 * k})`; }
+  };
+  const press = (el, t, at) => { const k = t >= at && t < at + 0.22 ? 0.95 : 1; el.style.transform = `scale(${k})`; };
+  const caretHTML = '<span class="caret"></span>';
+  const blink = (t) => (Math.floor(t * 2.2) % 2 === 0 ? caretHTML : '');
+
+  // ---------- render ----------
+  function render(t) {
+    t = clamp(t, 0, DUR);
+    for (const id in S) $(id).style.opacity = sceneAlpha(t, S[id]);
+    $('bar').style.width = `${(t / DUR) * 100}%`;
+    const ch = CHAPTERS.filter(([, s]) => t >= s).pop();
+    $('caption').textContent = t < 5.5 || t > 62 ? '' : `FocusFlow · ${ch[0]}`;
+
+    // S0 intro
+    if (t < 6) {
+      const bg = eBack(prog(t, 0.1, 0.9));
+      $('intro-mark').style.transform = `scale(${bg})`;
+      $('intro-mark').style.opacity = prog(t, 0.1, 0.4);
+      const r = eInOut(prog(t, 0.6, 1.9));
+      $('im-ring').setAttribute('stroke-dashoffset', ringLen - 735 * r);
+      $('im-check').setAttribute('stroke-dashoffset', checkLen * (1 - eOut(prog(t, 1.6, 2.4))));
+      $('im-dot').setAttribute('r', 23 * eBack(prog(t, 2.2, 2.7)));
+      const w = eOut(prog(t, 2.3, 3.1));
+      $('intro-word').style.opacity = w; $('intro-word').style.transform = `translateY(${(1 - w) * 40}px)`;
+      const g = eOut(prog(t, 2.9, 3.7));
+      $('intro-tag').style.opacity = g; $('intro-tag').style.transform = `translateY(${(1 - g) * 30}px)`;
+    }
+
+    // S1 problem
+    if (t > 5 && t < 11) {
+      const lt = t - 5.5;
+      $('chaos').querySelectorAll('[data-i]').forEach((el) => {
+        const i = +el.dataset.i;
+        const ang = i * 2.39996;
+        const rx = 760 * (0.55 + 0.45 * ((i * 37) % 10) / 10), ry = 400 * (0.5 + 0.5 * ((i * 53) % 10) / 10);
+        const sy = Math.sin(ang); const bx = 960 + Math.cos(ang) * rx - 100, by = 520 + (Math.abs(sy) < 0.35 ? Math.sign(sy || 1) * 0.35 : sy) * ry * 1.15 - 20;
+        const jx = Math.sin(lt * 3 + i) * 14, jy = Math.cos(lt * 2.4 + i * 1.7) * 12;
+        const collapse = eInOut(prog(lt, 2.4, 3.3));
+        const x = lerp(bx + jx, 860, collapse), y = lerp(by + jy, 500, collapse);
+        el.style.transform = `translate(${x}px, ${y}px) rotate(${Math.sin(lt * 2 + i) * 6 * (1 - collapse)}deg) scale(${1 - collapse * 0.8})`;
+        el.style.opacity = prog(lt, i * 0.07, i * 0.07 + 0.3) * (1 - collapse) * (1 - 0.6 * prog(lt, 0.8, 1.4));
+      });
+      const q = eOut(prog(lt, 0.8, 1.6)) * (1 - prog(lt, 2.4, 2.9));
+      $('prob-q').style.opacity = q; $('prob-q').style.transform = `scale(${0.94 + 0.06 * q})`;
+      const a = eOut(prog(lt, 3.1, 3.9));
+      $('prob-a').style.opacity = a; $('prob-a').style.top = `${lerp(520, 480, a)}px`;
+    }
+
+    // S2 sign up
+    if (t > 10 && t < 17.5) {
+      copyIn('s2', t, 10.5);
+      const hs = prog(t, 12.2, 13.4), es = prog(t, 13.8, 15.0);
+      $('su-handle').classList.toggle('focus', t > 12 && t < 13.6);
+      $('su-email').classList.toggle('focus', t > 13.6 && t < 15.4);
+      $('su-handle').innerHTML = `<span class="mono" style="color:#2f7d5a">@</span>${type('yourname', hs)}${t > 12 && t < 13.6 ? blink(t) : ''}`;
+      $('su-email').innerHTML = `${type('you@example.com', es)}${t > 13.6 && t < 15.4 ? blink(t) : ''}`;
+      press($('su-btn'), t, 15.7);
+      setCursor('cur-s2', [[11, 1500, 900], [12, 1300, 590], [13.6, 1300, 690], [15.4, 1300, 690], [15.7, 1300, 790, 1], [17, 1360, 850]], t);
+    }
+
+    // S3 AI breakdown
+    if (t > 16.5 && t < 29.5) {
+      copyIn('s3', t, 17);
+      const phaseB = prog(t, 20.9, 21.3), phaseC = prog(t, 25.2, 25.6);
+      $('ai-a').style.opacity = 1 - phaseB;
+      $('ai-b').style.opacity = phaseB * (1 - phaseC);
+      $('ai-b').style.transform = `translateX(${(1 - eOut(phaseB)) * 40}px)`;
+      $('ai-c').style.opacity = phaseC;
+      $('ai-goal').classList.toggle('focus', t > 18 && t < 20.4);
+      $('ai-goal').innerHTML = type('Launch a Shopify store selling handmade candles', prog(t, 18.2, 20.2)) + (t > 18 && t < 20.4 ? blink(t) : '');
+      press($('ai-continue'), t, 20.6);
+      $('ai-q1').innerHTML = type('Yes, 6 scents, $18 each', prog(t, 21.6, 22.9));
+      $('ai-q2').innerHTML = type('In 4 weeks', prog(t, 23.2, 24.1));
+      $('ai-q1').classList.toggle('focus', t > 21.4 && t < 23);
+      $('ai-q2').classList.toggle('focus', t > 23 && t < 24.3);
+      press($('ai-gen'), t, 24.8);
+      $('roadmap').querySelectorAll('.task').forEach((el, i) => {
+        const k = eOut(prog(t, 25.6 + i * 0.22, 26.2 + i * 0.22));
+        el.style.opacity = k; el.style.transform = `translateY(${(1 - k) * 24}px)`;
+      });
+      $('s3-p').textContent = t < 25.4 ? 'AI asks a few quick questions, then builds a step-by-step roadmap.' : 'Each step lands in your task list with a priority. Send it to a circle too.';
+      setCursor('cur-s3', [[17.5, 1600, 950], [18, 1350, 440], [20.3, 1350, 440], [20.6, 1400, 560, 1], [21.2, 1400, 560], [21.5, 1330, 450], [23, 1330, 450], [23.2, 1330, 550], [24.4, 1330, 550], [24.8, 1400, 650, 1], [25.6, 1700, 950]], t);
+    }
+
+    // S4 tasks
+    if (t > 28.5 && t < 37) {
+      copyIn('s4', t, 29);
+      // drag task 3 (index 3) to top between 31.0 and 32.6
+      const d = eInOut(prog(t, 31.0, 32.4));
+      const lifted = t > 30.8 && t < 32.7;
+      const order = (i) => {
+        // start positions: 0..4; target: [3,0,1,2,4]
+        if (i === 3) return lerp(3, 0, d);
+        if (i < 3) return i + d;
+        return i;
+      };
+      $('tasklist').querySelectorAll('.task').forEach((el) => {
+        const i = +el.dataset.i;
+        const y = order(i) * 84;
+        el.style.top = `${y}px`;
+        el.style.zIndex = i === 3 ? 5 : 1;
+        el.style.boxShadow = i === 3 && lifted ? '0 18px 40px rgb(30 61 45 / .22)' : 'none';
+        el.style.transform = i === 3 && lifted ? 'scale(1.03)' : 'none';
+        el.style.borderColor = i === 3 && lifted ? '#2f7d5a' : '#e3e9e5';
+        const k = eOut(prog(t, 29.4 + i * 0.12, 30 + i * 0.12));
+        el.style.opacity = k;
+        // tick task 3 (now at top) at 34.2
+        const done = i === 3 && t > 34.2;
+        const box = el.querySelector('.box');
+        box.style.background = done ? '#2f7d5a' : '#fff';
+        box.style.borderColor = done ? '#2f7d5a' : '#b9c7be';
+        box.querySelector('svg').style.opacity = done ? 1 : 0;
+        el.querySelector('.strike').style.width = i === 3 ? `${eOut(prog(t, 34.25, 34.7)) * 100}%` : '0';
+        el.querySelector('.txt').style.color = done ? '#748279' : '#18231e';
+      });
+      $('t-count').textContent = t > 34.2 ? '4 open · 1 done today' : '5 open · 0 done today';
+      // cursor: window left 800, top 150+50 header; main starts x 1010, tasklist top 150+50+130=330
+      setCursor('cur-s4', [[29.5, 1650, 980], [30.7, 1045, 600], [31.0, 1045, 600, 1], [32.4, 1045, 348], [33.6, 1085, 348], [34.2, 1085, 348, 1], [36, 1500, 900]], t);
+    }
+
+    // S5 timer
+    if (t > 36 && t < 45.5) {
+      copyIn('s5', t, 36.5);
+      $('tm-presets').querySelectorAll('[data-m]').forEach((el) => {
+        const on = el.dataset.m === '25' && t > 38.3;
+        el.style.background = on ? '#dcebe3' : '#fff';
+        el.style.borderColor = on ? '#2f7d5a' : '#d4ddd7';
+        el.style.color = on ? '#194c37' : '#18231e';
+      });
+      press($('tm-start'), t, 39.2);
+      const run = prog(t, 39.4, 43.0); // 25 minutes compressed
+      const isBreak = t >= 43.2;
+      let secs = isBreak ? 5 * 60 - Math.round(prog(t, 43.4, 45) * 40) : Math.round(25 * 60 * (1 - run));
+      $('tm-time').textContent = `${String(Math.floor(secs / 60)).padStart(2, '0')}:${String(secs % 60).padStart(2, '0')}`;
+      const ring = $('tm-ring');
+      ring.setAttribute('stroke', isBreak ? '#d6a052' : '#2f7d5a');
+      ring.setAttribute('stroke-dashoffset', isBreak ? 1131 * (1 - prog(t, 43.4, 45) * 0.13) : 1131 * (1 - run));
+      $('tm-mode').textContent = isBreak ? 'Break · session saved' : 'Focus';
+      $('tm-mode').style.color = isBreak ? '#9a5d0f' : '#2f7d5a';
+      $('tm-start').textContent = t > 39.3 && !isBreak ? 'Pause' : 'Start';
+      setCursor('cur-s5', [[37, 1700, 980], [38, 1225, 890], [38.3, 1225, 890, 1], [38.9, 1530, 890], [39.2, 1530, 890, 1], [40.5, 1760, 1000]], t);
+    }
+
+    // S6 track
+    if (t > 44.5 && t < 52) {
+      copyIn('s6', t, 45);
+      $('stats').querySelectorAll('[data-s]').forEach((el) => {
+        const i = +el.dataset.s; const [, v, f] = STATS[i];
+        el.textContent = f(v * eOut(prog(t, 46 + i * 0.15, 47.6 + i * 0.15)));
+      });
+      $('bars').querySelectorAll('[data-b]').forEach((el) => {
+        const i = +el.dataset.b; const k = eBack(prog(t, 46.4 + i * 0.12, 47.2 + i * 0.12));
+        el.style.height = `${(WEEK[i][1] / 4) * 220 * k}px`;
+        const lab = $('bars').querySelector(`[data-bv="${i}"]`);
+        lab.textContent = WEEK[i][1]; lab.style.bottom = `${(WEEK[i][1] / 4) * 220 * k + 8}px`; lab.style.opacity = prog(t, 47 + i * 0.12, 47.4 + i * 0.12);
+      });
+    }
+
+    // S7 circles
+    if (t > 51 && t < 58.5) {
+      copyIn('s7', t, 51.5);
+      $('code').querySelectorAll('[data-c]').forEach((el) => {
+        const i = +el.dataset.c; const k = eBack(prog(t, 52.3 + i * 0.1, 52.8 + i * 0.1));
+        el.style.transform = `rotateX(${(1 - k) * 90}deg)`; el.style.opacity = prog(t, 52.3 + i * 0.1, 52.5 + i * 0.1);
+      });
+      $('streaks').querySelectorAll('[data-m]').forEach((el) => {
+        const r = +el.dataset.m; const k = eOut(prog(t, 53.4 + r * 0.45, 54 + r * 0.45));
+        el.style.opacity = k; el.style.transform = `translateX(${(1 - k) * 40}px)`;
+      });
+      $('streaks').querySelectorAll('[data-d]').forEach((el) => {
+        const [r, i] = el.dataset.d.split('-').map(Number);
+        const lit = el.dataset.on === '1' && t > 54.2 + r * 0.45 + i * 0.12;
+        el.style.background = lit ? (i === 6 ? '#d6a052' : '#2f7d5a') : '#e3e9e5';
+      });
+    }
+
+    // S8 profile
+    if (t > 57.5 && t < 62.5) {
+      copyIn('s8', t, 58);
+      const c = eBack(prog(t, 58.2, 59.1));
+      $('card').style.transform = `rotate(${(1 - c) * -4}deg) scale(${0.9 + 0.1 * c})`;
+    }
+
+    // S9 outro
+    if (t > 61.5) {
+      const m = eBack(prog(t, 62.1, 62.8));
+      $('out-mark').style.transform = `scale(${m})`;
+      const h = eOut(prog(t, 62.5, 63.3));
+      $('out-h').style.opacity = h; $('out-h').style.transform = `translateY(${(1 - h) * 30}px)`;
+      const s = eOut(prog(t, 63, 63.7));
+      $('out-steps').style.opacity = s;
+      const u = eBack(prog(t, 63.5, 64.2));
+      $('out-url').style.transform = `translateX(-50%) scale(${u})`;
+    }
+  }
+
+  // ---------- player ----------
+  const vp = $('viewport'), stage = $('stage');
+  const capture = new URLSearchParams(location.search).has('capture') || location.hash === '#capture';
+  if (capture) document.body.classList.add('capture');
+  const fit = () => { stage.style.transform = `scale(${vp.clientWidth / 1920})`; };
+  new ResizeObserver(fit).observe(vp); fit();
+
+  let t = 0, playing = !capture, last = null;
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (reduce && !capture) { playing = false; t = 26.5; }
+  const fmt = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
+  const chapEl = $('chapters');
+  chapEl.innerHTML = CHAPTERS.map(([n, s], i) => `<button type="button" data-i="${i}">${n}</button>`).join('');
+  chapEl.addEventListener('click', (e) => { const b = e.target.closest('button'); if (!b) return; t = CHAPTERS[+b.dataset.i][1] + 0.01; draw(); });
+  const draw = () => {
+    render(t);
+    $('scrub').value = t; $('clock').textContent = `${fmt(t)} / ${fmt(DUR)}`;
+    $('play').textContent = playing ? 'Pause' : (t >= DUR ? 'Replay' : 'Play');
+    const cur = CHAPTERS.filter(([, s]) => t >= s).length - 1;
+    chapEl.querySelectorAll('button').forEach((b, i) => b.classList.toggle('on', i === cur));
+  };
+  $('play').addEventListener('click', () => { if (t >= DUR) t = 0; playing = !playing; last = null; draw(); });
+  $('scrub').addEventListener('input', (e) => { t = +e.target.value; draw(); });
+  const loop = (now) => {
+    if (playing) { if (last != null) t += (now - last) / 1000; if (t >= DUR) { t = DUR; playing = false; } draw(); }
+    last = now; requestAnimationFrame(loop);
+  };
+  window.__render = (s) => render(s);
+  window.__DUR = DUR;
+  draw();
+  if (!capture) requestAnimationFrame(loop);
+})();
+</script>
