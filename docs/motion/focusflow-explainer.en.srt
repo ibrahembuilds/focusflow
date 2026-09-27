@@ -1,0 +1,51 @@
+1
+00:00:00,900 --> 00:00:05,520
+Meet FocusFlow. Plan your goals, focus deeply, and track your progress.
+
+2
+00:00:06,400 --> 00:00:11,220
+Too much on your mind? FocusFlow turns it into a plan you can actually finish.
+
+3
+00:00:12,100 --> 00:00:17,340
+Step one. Create your free account with email or Google, and pick your own username.
+
+4
+00:00:18,600 --> 00:00:20,766
+Step two. Type any big goal.
+
+5
+00:00:20,516 --> 00:00:28,360
+The AI asks you a few quick questions, then builds a step-by-step roadmap, with every task already prioritized.
+
+6
+00:00:30,600 --> 00:00:35,420
+Step three. Drag your tasks into the order you want, and check them off as you go.
+
+7
+00:00:38,100 --> 00:00:40,744
+Step four. Start a focus session.
+
+8
+00:00:40,494 --> 00:00:42,702
+Pick 25, 45, or 60 minutes.
+
+9
+00:00:42,452 --> 00:00:47,780
+When it ends, your session is saved, and a five-minute break is ready.
+
+10
+00:00:48,700 --> 00:00:53,980
+Step five. Your dashboard, analytics, and calendar show exactly how your week is going.
+
+11
+00:00:55,200 --> 00:01:00,700
+Step six. Create a circle, share the invite code, and build streaks together with friends.
+
+12
+00:01:01,700 --> 00:01:04,660
+Then share your profile card with one simple link.
+
+13
+00:01:05,700 --> 00:01:09,939
+FocusFlow. Start free today at focusflowai.site

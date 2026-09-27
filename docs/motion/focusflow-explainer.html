@@ -399,8 +399,8 @@
   </div>
   <div class="controls">
     <button id="play" type="button">Pause</button>
-    <input id="scrub" type="range" min="0" max="66" step="0.01" value="0" aria-label="Seek">
-    <span id="clock">0:00 / 1:06</span>
+    <input id="scrub" type="range" min="0" max="71.2" step="0.01" value="0" aria-label="Seek">
+    <span id="clock">0:00 / 1:11</span>
   </div>
   <div class="chapters" id="chapters"></div>
 </div>
@@ -426,6 +426,25 @@
     ['Intro', 0], ['Sign up', 10.5], ['AI breakdown', 17], ['Tasks', 29], ['Focus timer', 36.5],
     ['Track', 45], ['Circles', 51.5], ['Profile', 58], ['Start', 62],
   ];
+
+  // Video timeline. Each scene plays over LEN seconds so its voiceover line fits:
+  // most scenes are stretched evenly; HOLD scenes play at normal speed and then
+  // rest on their last frame.
+  const LEN = { s0: 5.9, s1: 5.7, s2: 6.5, s3: 12, s4: 7.5, s5: 10.6, s6: 6.5, s7: 6.5, s8: 4, s9: 6 };
+  const HOLD = { s9: true };
+  const SEGS = [];
+  let acc = 0;
+  for (const id of Object.keys(S)) { SEGS.push({ id, a: S[id][0], b: S[id][1], v0: acc, len: LEN[id] }); acc += LEN[id]; }
+  const VDUR = Math.round(acc * 100) / 100;
+  const animTime = (v) => {
+    const seg = SEGS.find((g) => v < g.v0 + g.len) || SEGS[SEGS.length - 1];
+    const k = v - seg.v0;
+    return HOLD[seg.id] ? Math.min(seg.b, seg.a + k) : seg.a + (k / seg.len) * (seg.b - seg.a);
+  };
+  const videoTime = (a) => {
+    const seg = SEGS.find((g) => a < g.b) || SEGS[SEGS.length - 1];
+    return seg.v0 + (HOLD[seg.id] ? a - seg.a : ((a - seg.a) / (seg.b - seg.a)) * seg.len);
+  };
 
   // ---------- build repeated DOM ----------
   const MARK = '<svg viewBox="0 0 512 512"><rect width="512" height="512" rx="132" fill="#194C37"/><circle cx="256" cy="256" r="154" fill="none" stroke="#F4F7F5" stroke-width="44" stroke-linecap="round" stroke-dasharray="735 233" transform="rotate(-42 256 256)"/><path d="M166 266l66 66 124-142" fill="none" stroke="#A9D4BD" stroke-width="46" stroke-linecap="round" stroke-linejoin="round"/><circle cx="369" cy="133" r="23" fill="#D6A052"/></svg>';
@@ -635,7 +654,7 @@
     if (t > 36 && t < 45.5) {
       copyIn('s5', t, 36.5);
       $('tm-presets').querySelectorAll('[data-m]').forEach((el) => {
-        const on = el.dataset.m === '25' && t > 38.3;
+        const on = el.dataset.m === '25' && t > 38.3 && t < 43.2;
         el.style.background = on ? '#dcebe3' : '#fff';
         el.style.borderColor = on ? '#2f7d5a' : '#d4ddd7';
         el.style.color = on ? '#194c37' : '#18231e';
@@ -643,12 +662,12 @@
       press($('tm-start'), t, 39.2);
       const run = prog(t, 39.4, 43.0); // 25 minutes compressed
       const isBreak = t >= 43.2;
-      let secs = isBreak ? 5 * 60 - Math.round(prog(t, 43.4, 45) * 40) : Math.round(25 * 60 * (1 - run));
+      const secs = isBreak ? 5 * 60 : Math.round(25 * 60 * (1 - run));
       $('tm-time').textContent = `${String(Math.floor(secs / 60)).padStart(2, '0')}:${String(secs % 60).padStart(2, '0')}`;
       const ring = $('tm-ring');
       ring.setAttribute('stroke', isBreak ? '#d6a052' : '#2f7d5a');
-      ring.setAttribute('stroke-dashoffset', isBreak ? 1131 * (1 - prog(t, 43.4, 45) * 0.13) : 1131 * (1 - run));
-      $('tm-mode').textContent = isBreak ? 'Break · session saved' : 'Focus';
+      ring.setAttribute('stroke-dashoffset', isBreak ? 1131 : 1131 * (1 - run));
+      $('tm-mode').textContent = isBreak ? 'Session saved · break ready' : 'Focus';
       $('tm-mode').style.color = isBreak ? '#9a5d0f' : '#2f7d5a';
       $('tm-start').textContent = t > 39.3 && !isBreak ? 'Pause' : 'Start';
       setCursor('cur-s5', [[37, 1700, 980], [38, 1225, 890], [38.3, 1225, 890, 1], [38.9, 1530, 890], [39.2, 1530, 890, 1], [40.5, 1760, 1000]], t);
@@ -716,26 +735,28 @@
 
   let t = 0, playing = !capture, last = null;
   const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
-  if (reduce && !capture) { playing = false; t = 26.5; }
+  if (reduce && !capture) { playing = false; t = videoTime(26.5); }
   const fmt = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
+  $('scrub').max = VDUR;
   const chapEl = $('chapters');
   chapEl.innerHTML = CHAPTERS.map(([n, s], i) => `<button type="button" data-i="${i}">${n}</button>`).join('');
-  chapEl.addEventListener('click', (e) => { const b = e.target.closest('button'); if (!b) return; t = CHAPTERS[+b.dataset.i][1] + 0.01; draw(); });
+  chapEl.addEventListener('click', (e) => { const b = e.target.closest('button'); if (!b) return; t = videoTime(CHAPTERS[+b.dataset.i][1]) + 0.01; draw(); });
   const draw = () => {
-    render(t);
-    $('scrub').value = t; $('clock').textContent = `${fmt(t)} / ${fmt(DUR)}`;
-    $('play').textContent = playing ? 'Pause' : (t >= DUR ? 'Replay' : 'Play');
-    const cur = CHAPTERS.filter(([, s]) => t >= s).length - 1;
+    render(animTime(t));
+    $('scrub').value = t; $('clock').textContent = `${fmt(t)} / ${fmt(VDUR)}`;
+    $('play').textContent = playing ? 'Pause' : (t >= VDUR ? 'Replay' : 'Play');
+    const cur = CHAPTERS.filter(([, s]) => t >= videoTime(s)).length - 1;
     chapEl.querySelectorAll('button').forEach((b, i) => b.classList.toggle('on', i === cur));
   };
-  $('play').addEventListener('click', () => { if (t >= DUR) t = 0; playing = !playing; last = null; draw(); });
+  $('play').addEventListener('click', () => { if (t >= VDUR) t = 0; playing = !playing; last = null; draw(); });
   $('scrub').addEventListener('input', (e) => { t = +e.target.value; draw(); });
   const loop = (now) => {
-    if (playing) { if (last != null) t += (now - last) / 1000; if (t >= DUR) { t = DUR; playing = false; } draw(); }
+    if (playing) { if (last != null) t += (now - last) / 1000; if (t >= VDUR) { t = VDUR; playing = false; } draw(); }
     last = now; requestAnimationFrame(loop);
   };
-  window.__render = (s) => render(s);
-  window.__DUR = DUR;
+  window.__render = (v) => render(animTime(v));
+  window.__DUR = VDUR;
+  window.__SEGS = SEGS;
   draw();
   if (!capture) requestAnimationFrame(loop);
 })();
