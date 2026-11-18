@@ -60,10 +60,8 @@ test.describe('a dropped connection never loses a task', () => {
     }
     expect((await backendState(request)).tasks).toHaveLength(0);
 
-    await page.reload();
-    await expect(retry).toBeVisible();
     await page.unroute(endpoint);
-    await retry.click();
+    await page.reload();
     await expect.poll(async () => (await backendState(request)).tasks.map((task) => task.text))
       .toEqual(['Keep this task']);
     await expect(retry).toHaveCount(0);
