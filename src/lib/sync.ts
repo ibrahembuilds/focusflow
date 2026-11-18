@@ -142,9 +142,9 @@ export async function fetchUserSessions(userId: string): Promise<TimerSession[] 
 // replaces it with server state.
 
 const QUEUE_KEY = 'focusflow-pending-writes';
-// A write that keeps failing for a non-transient reason must not block the
-// queue forever; give up after this many flush attempts.
-const MAX_ATTEMPTS = 8;
+// Give later writes a turn after repeated failures on one row. The failed
+// write stays queued for a future retry or a newer edit to the same row.
+const SKIP_AFTER_ATTEMPTS = 8;
 
 type WriteBody =
   | { kind: 'task-upsert'; task: Task }
@@ -265,6 +265,7 @@ export async function flushPendingWrites(userId: string | null): Promise<boolean
   flushing = true;
   notifyStatus();
   try {
+    let firstError: string | null = null;
     for (const write of own) {
       const error = await runWrite(write);
       if (!error) {
@@ -272,20 +273,13 @@ export async function flushPendingWrites(userId: string | null): Promise<boolean
         continue;
       }
 
-      const attempts = write.attempts + 1;
-      if (attempts >= MAX_ATTEMPTS) {
-        console.error(`Giving up on pending ${write.kind} after ${attempts} attempts:`, error);
-        settle(write);
-        continue;
-      }
-
-      // Stop at the first failure so later writes can't overtake earlier ones.
+      firstError ??= error;
+      const attempts = Math.min(write.attempts + 1, SKIP_AFTER_ATTEMPTS);
       recordAttempt(write, attempts);
-      lastError = error;
-      return false;
+      if (attempts < SKIP_AFTER_ATTEMPTS) break;
     }
-    lastError = null;
-    return true;
+    lastError = firstError;
+    return !readQueue().some((w) => w.userId === userId);
   } finally {
     flushing = false;
     notifyStatus();
@@ -339,3 +333,4 @@ if (typeof window !== 'undefined') {
     if (document.visibilityState === 'visible') void flushPendingWrites(currentUserId);
   });
 }
+

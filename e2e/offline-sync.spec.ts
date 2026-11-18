@@ -35,6 +35,38 @@ test.describe('a dropped connection never loses a task', () => {
       .toContain('Pay the deposit');
   });
 
+  test('repeated failures keep the task available for retry', async ({ page, request }) => {
+    await signUp(page, uniqueEmail('repeated-retry'));
+    await page.goto('/app/tasks');
+
+    const endpoint = '**/rest/v1/tasks*';
+    await page.route(endpoint, (route) => {
+      if (route.request().method() !== 'POST') return route.continue();
+      return route.fulfill({ status: 400, json: { message: 'Save failed' } });
+    });
+
+    await page.getByPlaceholder('What do you want to accomplish?').fill('Keep this task');
+    await page.getByRole('button', { name: 'Add', exact: true }).click();
+    const retry = page.getByRole('button', { name: 'Retry now' });
+
+    // Wait for each attempt to finish before clicking again. Back-to-back
+    // clicks during one in-flight request would only exercise a single retry.
+    for (let attempt = 1; attempt <= 8; attempt += 1) {
+      if (attempt > 1) await retry.click();
+      await expect.poll(() => page.evaluate(() => {
+        const writes = JSON.parse(localStorage.getItem('focusflow-pending-writes') ?? '[]');
+        return writes.find((w: { task?: { text: string } }) => w.task?.text === 'Keep this task')?.attempts ?? 0;
+      })).toBeGreaterThanOrEqual(attempt);
+    }
+    expect((await backendState(request)).tasks).toHaveLength(0);
+
+    await page.unroute(endpoint);
+    await page.reload();
+    await expect.poll(async () => (await backendState(request)).tasks.map((task) => task.text))
+      .toEqual(['Keep this task']);
+    await expect(retry).toHaveCount(0);
+  });
+
   test('a queued task survives a full page reload', async ({ page, request }) => {
     const email = uniqueEmail('queued');
     await signUp(page, email);
